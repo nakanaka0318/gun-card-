@@ -909,6 +909,7 @@ select,input[type=text]{
     <footer class="home-foot">
       <span>縦・横どちらでも &middot; PP 2-3-4-5-6-6-7-7-8-8-9-9-10</span>
       <button class="chip" id="muteHome" type="button"></button>
+      <button class="chip" id="musicHome" type="button"></button>
     </footer>
   </section>
 
@@ -1262,6 +1263,7 @@ select,input[type=text]{
   <h3>決闘の設定</h3>
   <div class="sub">BATTLE MENU</div>
   <div class="kv"><span>効果音</span><button class="btn sm" id="mMute">ON</button></div>
+  <div class="kv"><span>音楽</span><button class="btn sm" id="mMusic">ON</button></div>
   <div class="kv"><span>ターンタイマー</span><b id="mTimer">--</b></div>
   <div class="ov-row">
     <button class="btn" id="mResign">投了してホームへ</button>
@@ -1345,6 +1347,255 @@ const Sfx = {
         case 'rumble': this.noise(.42, 420, 60, .28); this.tone(70, 40, .4, .14, 'sawtooth'); break;
       }
     } catch (e) { /* 音は失敗しても進行に影響させない */ }
+  }
+};
+/* ================= 音楽（BGM） =================
+   外部の音源ファイルは持たず、効果音と同じくその場の合成で鳴らす。
+   画面ごとに曲を変える（どの場所にもその場の音楽があるようにする）。
+   音の装置は効果音と共用で、画面が一度も触られていないうちは作らない。 */
+const MIDI = n => 440 * Math.pow(2, (n - 69) / 12);          // 音の高さ（MIDI番号→Hz）
+/* 曲の設計。1小節＝16ステップ（16分音符）。
+   chords は小節ごとの和音（MIDI番号の並び）、voices が各パートの鳴らし方。
+   pat はそのパートが鳴るステップ位置。bars を書くとその小節だけ鳴る。 */
+const BGM_TRACKS = {
+  /* 荒野の夕暮れ。ゆっくりした爪弾きと低音、ときどき口琴のような旋律 */
+  home: {
+    name: '荒野の夕暮れ', bpm: 72, bars: 4, gain: .9,
+    chords: [[50, 53, 57, 62], [50, 53, 57, 62], [46, 50, 53, 58], [48, 52, 55, 60]],
+    voices: [
+      { v: 'pluck', pat: [0, 3, 6, 8, 11, 14], pick: 'arp', oct: 0, gain: .16, dur: .9 },
+      { v: 'bass', pat: [0, 8], pick: 'root', oct: -12, gain: .22, dur: 1.4 },
+      { v: 'lead', pat: [4, 10], pick: 'top', oct: 12, gain: .10, dur: 1.1, bars: [1, 3] },
+      { v: 'shaker', pat: [2, 6, 10, 14], gain: .05 }
+    ]
+  },
+  /* 出立の支度。少し歩調が速く、軽い */
+  menu: {
+    name: '出立の支度', bpm: 86, bars: 4, gain: .95,
+    chords: [[50, 53, 57, 62], [53, 57, 60, 65], [48, 52, 55, 60], [55, 59, 62, 67]],
+    voices: [
+      { v: 'pluck', pat: [0, 4, 7, 10, 12], pick: 'arp', oct: 0, gain: .13, dur: .7 },
+      { v: 'bass', pat: [0, 6, 12], pick: 'root', oct: -12, gain: .18, dur: .9 },
+      { v: 'shaker', pat: [4, 12], gain: .05 }
+    ]
+  },
+  /* 卓上の工房。考えごとの邪魔をしない、ごく静かな繰り返し */
+  deck: {
+    name: '卓上の工房', bpm: 60, bars: 4, gain: .82,
+    chords: [[50, 57, 62, 65], [50, 57, 62, 65], [48, 55, 60, 64], [46, 53, 58, 62]],
+    voices: [
+      { v: 'pad', pat: [0], pick: 'chord', oct: 0, gain: .05, dur: 3.6 },
+      { v: 'pluck', pat: [0, 10], pick: 'arp', oct: 12, gain: .08, dur: 1.2 },
+      { v: 'bass', pat: [0], pick: 'root', oct: -12, gain: .13, dur: 2.4 }
+    ]
+  },
+  /* 夜の読書。いちばん静か。たまに鐘が鳴るだけ */
+  rule: {
+    name: '夜の読書', bpm: 52, bars: 4, gain: .78,
+    chords: [[50, 57, 62], [48, 55, 60], [46, 53, 58], [48, 55, 60]],
+    voices: [
+      { v: 'pad', pat: [0], pick: 'chord', oct: 0, gain: .045, dur: 4.4 },
+      { v: 'bell', pat: [8], pick: 'top', oct: 12, gain: .06, dur: 2.2, bars: [0, 2] }
+    ]
+  },
+  /* 検証の刻み。数を回している画面なので、機械的な刻みにする */
+  matchup: {
+    name: '検証の刻み', bpm: 104, bars: 2, gain: 1.0,
+    chords: [[50, 53, 57], [48, 51, 55]],
+    voices: [
+      { v: 'bass', pat: [0, 3, 6, 8, 11, 14], pick: 'root', oct: -12, gain: .14, dur: .22 },
+      { v: 'tick', pat: [0, 4, 8, 12], gain: .07 },
+      { v: 'shaker', pat: [2, 6, 10, 14], gain: .04 }
+    ]
+  },
+  /* 対峙。低音の繰り返しで押していく */
+  battle: {
+    name: '対峙', bpm: 96, bars: 4, gain: .95,
+    chords: [[50, 53, 57, 62], [50, 53, 57, 62], [55, 58, 62, 67], [57, 61, 64, 69]],
+    voices: [
+      { v: 'bass', pat: [0, 3, 6, 8, 11, 14], pick: 'root', oct: -12, gain: .20, dur: .26 },
+      { v: 'pluck', pat: [4, 12], pick: 'arp', oct: 0, gain: .11, dur: .5 },
+      { v: 'lead', pat: [6], pick: 'top', oct: 12, gain: .09, dur: 1.3, bars: [2, 3] },
+      { v: 'kick', pat: [0, 8], gain: .14 },
+      { v: 'shaker', pat: [2, 6, 10, 14], gain: .06 }
+    ]
+  },
+  /* 決着の余韻。勝敗の音を邪魔しないよう、余韻だけ置く */
+  result: {
+    name: '決着の余韻', bpm: 56, bars: 2, gain: .85,
+    chords: [[50, 57, 62, 65], [48, 55, 60, 64]],
+    voices: [
+      { v: 'pad', pat: [0], pick: 'chord', oct: 0, gain: .05, dur: 4 },
+      { v: 'bell', pat: [12], pick: 'top', oct: 12, gain: .05, dur: 1.8 }
+    ]
+  }
+};
+/* 画面と曲の対応。ここに無い画面は「出立の支度」を流す */
+const BGM_FOR_SCREEN = {
+  home: 'home', setup: 'menu', twopick: 'menu', pickrun: 'menu', community: 'menu', format: 'menu',
+  deck: 'deck', cards: 'deck', rule: 'rule', matchup: 'matchup', battle: 'battle'
+};
+
+/* 音楽全体の音量。効果音の瞬間音（最大0.6ほど）と足しても割れないところに置く */
+const BGM_LEVEL = 1.0;
+const Bgm = {
+  on: store.get('music', true), key: null, timer: null, master: null,
+  step: 0, nextAt: 0, track: null,
+
+  /* 効果音と同じ装置を使う。触られる前は null が返るので何も鳴らさない */
+  ac() { return Sfx.ac(); },
+  out() {
+    const ac = this.ac(); if (!ac) return null;
+    if (!this.master) {
+      this.master = ac.createGain();
+      this.master.gain.value = 0;
+      this.master.connect(ac.destination);
+    }
+    return this.master;
+  },
+
+  /* ---- 音色。どれも「立ち上がり→減衰」を一度きりで作る ---- */
+  voice(kind, freq, at, dur, gain) {
+    const ac = this.ac(), out = this.out(); if (!ac || !out) return;
+    const g = ac.createGain();
+    if (kind === 'shaker' || kind === 'tick' || kind === 'kick') {
+      const len = Math.max(1, Math.floor(ac.sampleRate * dur));
+      const buf = ac.createBuffer(1, len, ac.sampleRate), d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, kind === 'kick' ? 1 : 2.4);
+      const src = ac.createBufferSource(); src.buffer = buf;
+      const f = ac.createBiquadFilter();
+      f.type = kind === 'kick' ? 'lowpass' : 'highpass';
+      f.frequency.value = kind === 'kick' ? 140 : (kind === 'tick' ? 2400 : 5200);
+      g.gain.setValueAtTime(gain, at);
+      g.gain.exponentialRampToValueAtTime(.0005, at + dur);
+      src.connect(f); f.connect(g); g.connect(out);
+      src.start(at); src.stop(at + dur + .02);
+      if (kind === 'kick') {                                  // 胴の鳴りを足す
+        const o = ac.createOscillator(), og = ac.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(120, at); o.frequency.exponentialRampToValueAtTime(44, at + dur);
+        og.gain.setValueAtTime(gain, at); og.gain.exponentialRampToValueAtTime(.0005, at + dur);
+        o.connect(og); og.connect(out); o.start(at); o.stop(at + dur + .02);
+      }
+      return;
+    }
+    const o = ac.createOscillator();
+    o.frequency.setValueAtTime(freq, at);
+    if (kind === 'pluck') {
+      o.type = 'triangle';
+      const f = ac.createBiquadFilter(); f.type = 'lowpass';
+      f.frequency.setValueAtTime(freq * 6, at);
+      f.frequency.exponentialRampToValueAtTime(Math.max(200, freq * 1.5), at + dur);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain, at + .012);
+      g.gain.exponentialRampToValueAtTime(.0005, at + dur);
+      o.connect(f); f.connect(g);
+    } else if (kind === 'bass') {
+      o.type = 'triangle';
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain, at + .02);
+      g.gain.exponentialRampToValueAtTime(.0005, at + dur);
+      o.connect(g);
+    } else if (kind === 'lead') {                             // 口琴のように軽く揺らす
+      o.type = 'sine';
+      const lfo = ac.createOscillator(), lg = ac.createGain();
+      lfo.frequency.value = 5.2; lg.gain.value = freq * .012;
+      lfo.connect(lg); lg.connect(o.frequency);
+      lfo.start(at); lfo.stop(at + dur + .05);
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain, at + .09);
+      g.gain.setValueAtTime(gain, at + dur * .6);
+      g.gain.exponentialRampToValueAtTime(.0005, at + dur);
+      o.connect(g);
+    } else if (kind === 'bell') {
+      o.type = 'sine';
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain, at + .006);
+      g.gain.exponentialRampToValueAtTime(.0005, at + dur);
+      o.connect(g);
+    } else {                                                  // pad：ゆっくり膨らむ和音
+      o.type = 'sawtooth';
+      const f = ac.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 760;
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain, at + dur * .35);
+      g.gain.linearRampToValueAtTime(.0005, at + dur);
+      o.connect(f); f.connect(g);
+    }
+    g.connect(out);
+    o.start(at); o.stop(at + dur + .05);
+  },
+
+  /* 1ステップぶんの音を先に予約する */
+  schedule(at) {
+    const t = this.track; if (!t) return;
+    const spb = 16;                                           // 1小節 = 16ステップ
+    const bar = Math.floor(this.step / spb) % t.bars;
+    const pos = this.step % spb;
+    const chord = t.chords[bar % t.chords.length];
+    const beat = 60 / t.bpm;
+    t.voices.forEach(vo => {
+      if (vo.bars && vo.bars.indexOf(bar) < 0) return;
+      const i = vo.pat.indexOf(pos); if (i < 0) return;
+      const dur = (vo.dur || .5) * beat;
+      if (vo.v === 'shaker') return this.voice('shaker', 0, at, .055, vo.gain);
+      if (vo.v === 'tick') return this.voice('tick', 0, at, .035, vo.gain);
+      if (vo.v === 'kick') return this.voice('kick', 0, at, .16, vo.gain);
+      if (vo.pick === 'chord') { chord.forEach(n => this.voice(vo.v, MIDI(n + (vo.oct || 0)), at, dur, vo.gain)); return; }
+      let note;
+      if (vo.pick === 'root') note = chord[0];
+      else if (vo.pick === 'top') note = chord[(i + bar) % chord.length] + 12;
+      else note = chord[i % chord.length];                     // arp：和音を順に上る
+      this.voice(vo.v, MIDI(note + (vo.oct || 0)), at, dur, vo.gain);
+    });
+  },
+
+  tick() {
+    const ac = this.ac(); if (!ac || !this.track) return;
+    const stepDur = 60 / this.track.bpm / 4;
+    while (this.nextAt < ac.currentTime + .25) {
+      if (this.nextAt < ac.currentTime) this.nextAt = ac.currentTime + .02;   // 復帰直後のずれを直す
+      this.schedule(this.nextAt);
+      this.nextAt += stepDur;
+      this.step++;
+    }
+  },
+
+  /* 曲を切り替える。同じ曲なら流しっぱなしにする（画面を行き来しても途切れない） */
+  set(key) {
+    if (!BGM_TRACKS[key]) key = 'menu';
+    if (this.key === key && this.timer) { this.fade(this.on ? 1 : 0); return; }
+    this.key = key;
+    this.track = BGM_TRACKS[key];
+    this.step = 0;
+    const ac = this.ac();
+    if (!ac) return;                                          // まだ触られていない：触られた時に始まる
+    this.nextAt = ac.currentTime + .06;
+    if (!this.timer) this.timer = setInterval(() => { try { this.tick(); } catch (e) { /* 音は進行に影響させない */ } }, 25);
+    this.fade(this.on ? 1 : 0);
+  },
+  forScreen(name) { this.set(BGM_FOR_SCREEN[name] || 'menu'); },
+
+  fade(to) {
+    const ac = this.ac(), out = this.out(); if (!ac || !out) return;
+    const g = out.gain, now = ac.currentTime;
+    const lv = (BGM_TRACKS[this.key] || {}).gain || 1;
+    g.cancelScheduledValues(now);
+    g.setValueAtTime(g.value, now);
+    g.linearRampToValueAtTime(to * BGM_LEVEL * lv, now + .5);  // 効果音より控えめにする
+  },
+  stop() {
+    this.fade(0);
+    if (this.timer) { clearInterval(this.timer); this.timer = null; }
+    this.key = null; this.track = null;
+  },
+  toggle() {
+    this.on = !this.on;
+    store.set('music', this.on);
+    if (this.on) {
+      const ac = this.ac(); if (ac && ac.state === 'suspended') ac.resume();
+      this.set(BGM_FOR_SCREEN[UIState.screen] || 'menu');
+    } else this.fade(0);
+    return this.on;
   }
 };
 
@@ -12539,6 +12790,7 @@ const UI = {
     if (name === 'matchup') this.renderMatchup();
     if (name === 'cards') this.renderCards();
     if (name === 'rule') this.renderRule();
+    Bgm.forScreen(name);                                   // その場に合った曲に替える
     Sfx.play('click');
   },
   toast(msg) { const t = el('div', 'toast', esc(msg)); document.body.appendChild(t); setTimeout(() => t.remove(), 2400); },
@@ -13738,6 +13990,7 @@ const UI = {
     }
     const win = G.winner, meIdx = viewIdx();
     const isWin = win === meIdx, draw = win === -1;
+    Bgm.set('result');                                     // 決着の音を邪魔しない曲に替える
     Sfx.play(draw ? 'lose' : (isWin ? 'win' : 'lose'));
     const title = draw ? 'DRAW' : (isWin ? 'WIN' : 'LOSE');
     const who = draw ? '両者が倒れた' : `${G.players[win].name}（${CLASSES[G.players[win].cls].name}）の勝利`;
@@ -14302,11 +14555,13 @@ function initEvents() {
   });
   $('#btMenu').addEventListener('click', () => {
     $('#mMute').textContent = Sfx.on ? 'ON' : 'OFF';
+    $('#mMusic').textContent = Bgm.on ? 'ON' : 'OFF';
     $('#mTimer').textContent = G && G.timerLimit ? G.timerLimit + '秒' : 'なし';
     $('#ovMenu').hidden = false;
   });
   $('#mClose').addEventListener('click', () => { $('#ovMenu').hidden = true; });
   $('#mMute').addEventListener('click', () => { Sfx.on = !Sfx.on; store.set('sound', Sfx.on); $('#mMute').textContent = Sfx.on ? 'ON' : 'OFF'; updateMuteLabel(); Sfx.play('click'); });
+  $('#mMusic').addEventListener('click', () => { $('#mMusic').textContent = Bgm.toggle() ? 'ON' : 'OFF'; updateMuteLabel(); Sfx.play('click'); });
   $('#mResign').addEventListener('click', () => {
     if (G) { G.phase = 'over'; stopTimer(); }
     $('#ovMenu').hidden = true; $('#ovResult').hidden = true; UI.go('home');
@@ -14317,6 +14572,7 @@ function initEvents() {
     if (b.dataset.res === 'again') beginMatch(G ? G.mode : 'pvp'); else UI.go('home');
   });
   $('#muteHome').addEventListener('click', () => { Sfx.on = !Sfx.on; store.set('sound', Sfx.on); updateMuteLabel(); Sfx.play('click'); });
+  $('#musicHome').addEventListener('click', () => { Bgm.toggle(); updateMuteLabel(); Sfx.play('click'); });
   window.addEventListener('resize', () => { if (UIState.screen === 'battle') UI.renderBattle(); });
   document.addEventListener('keydown', e => {
     if (UIState.screen !== 'battle') return;
@@ -14324,7 +14580,13 @@ function initEvents() {
     if (e.key === 'e' || e.key === 'E') endTurn();
   });
 }
-function updateMuteLabel() { const n = $('#muteHome'); if (n) n.textContent = (Sfx.on ? '♪ 効果音 ON' : '♪ 効果音 OFF') + ' / タップで切替'; }
+function updateMuteLabel() {
+  const n = $('#muteHome'); if (n) n.textContent = (Sfx.on ? '♪ 効果音 ON' : '♪ 効果音 OFF') + ' / タップで切替';
+  const m = $('#musicHome');
+  if (m) m.textContent = Bgm.on
+    ? '♫ 音楽 ON' + (Bgm.key ? '：' + (BGM_TRACKS[Bgm.key] || {}).name : '')
+    : '♫ 音楽 OFF';
+}
 
 /* ---- 試合進行 ---- */
 /* mode: 'pvp'（1人回し）／'pve'（相手はAI。ハンデを付けられる） */
@@ -14412,6 +14674,8 @@ function boot() {
     Sfx.touched = true;
     const ac = Sfx.ac();
     if (ac && ac.state === 'suspended') ac.resume();
+    Bgm.forScreen(UIState.screen);                         // 触られて初めて音楽を鳴らし始める
+    updateMuteLabel();
   };
   ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, wake, { once: true, passive: true }));
