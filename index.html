@@ -408,6 +408,10 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 
 /* ================= バトル画面 ================= */
 .bt{display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; height:100%; min-height:0; position:relative}
+.bt-top{grid-row:1}
+.bt-ohand{grid-row:2}
+.bt-field{grid-row:3}
+.bt-bottom{grid-row:4}
 .bt-top{display:flex; align-items:center; gap:8px; padding:5px 9px; background:linear-gradient(#231A12,#191209cc); border-bottom:1px solid var(--edge)}
 /* 状態（温存・強気・全力）の情報。画面左上に出す */
 .stancebox{
@@ -719,6 +723,30 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   animation:toast 2.4s forwards;
 }
 @keyframes toast{0%{opacity:0; transform:translate(-50%,10px)} 10%,80%{opacity:1; transform:translate(-50%,0)} 100%{opacity:0; transform:translate(-50%,-6px)}}
+
+/* 札を並べて選ぶ場面（マリガン・融合・2PICK）で、効果の文をその場で読めるようにする欄 */
+.cardlines{display:flex; flex-direction:column; gap:6px; margin-top:12px; text-align:left}
+.cardlines .cline{
+  display:grid; grid-template-columns:auto minmax(0,1fr); gap:2px 9px;
+  grid-template-areas:'cost head' 'cost body';
+  padding:7px 10px; background:#1F170F; border:1px solid #3A2B1C; border-radius:3px;
+  border-left:2px solid var(--c,var(--brass-d));
+}
+.cardlines .cl-cost{
+  grid-area:cost; width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+  font-family:var(--f-num); font-weight:600; font-size:12px; color:#2A1A05;
+  background:var(--c,var(--brass)); border:1px solid #F0DCA6;
+}
+.cardlines .cl-head{grid-area:head; font-size:12.5px; font-weight:600; color:var(--sand)}
+.cardlines .cl-head s{text-decoration:none; font-family:var(--f-type); font-size:9px; letter-spacing:.05em; color:var(--faint); margin-left:7px}
+.cardlines .cl-body{grid-area:body; font-size:11.5px; line-height:1.75; color:var(--paper); white-space:pre-wrap; word-break:break-word}
+.cardlines .cl-body.none{color:var(--faint)}
+.cardlines .cl-pick{color:var(--rust-l); font-family:var(--f-type); font-size:9px; letter-spacing:.1em; margin-left:7px}
+.pickopt .pnames{text-align:left}
+.pickopt .ptext{
+  font-size:11px; line-height:1.7; color:var(--paper); text-align:left; white-space:pre-wrap;
+  background:#1F170F; border-left:2px solid var(--brass-d); border-radius:0 3px 3px 0; padding:5px 8px; margin-top:2px;
+}
 
 /* ---- デッキ編成：常に見えている操作帯 ---- */
 .deckfix{
@@ -1289,6 +1317,7 @@ select,input[type=text]{
   <h3 id="mullTitle">マリガン</h3>
   <div class="sub" id="mullSub">引き直したいカードを選ぶ</div>
   <div class="mull" id="mullCards"></div>
+  <div class="cardlines" id="mullText"></div>
   <div class="ov-row">
     <button class="btn" id="mullKeep">このままで</button>
     <button class="btn pri" id="mullGo">引き直す（0枚）</button>
@@ -1346,6 +1375,7 @@ select,input[type=text]{
   <h3 id="fusionTitle">融合させるカードを選ぶ</h3>
   <div class="sub" id="fusionSub">FUSION</div>
   <div class="mull" id="fusionCards"></div>
+  <div class="cardlines" id="fusionText"></div>
   <div class="ov-row" id="fusionFoot"></div>
 </div></div>
 
@@ -9986,7 +10016,7 @@ const CARDS = [
     id: 'sentryknight_001', ver: 9, name: 'セントリーナイト', cls: 'formation', type: 'follower',
     cost: 2, attack: 2, defense: 1, rarity: 'bronze', tribe: 'none',
     keywords: ['rush'], art: 'sentryknight', sky: 'ash',
-    text: '突進\\nファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が10枚以下なら、相手のリーダーに2ダメージを与える。\\n進化時： ファンファーレ効果が働く。',
+    text: '突進\nファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が10枚以下なら、相手のリーダーに2ダメージを与える。\n進化時： ファンファーレ効果が働く。',
     effects: [
       { hook: 'fanfare', type: 'discardDeck', params: { amount: 2 } },
       { hook: 'fanfare', cond: { deckMax: 10 }, type: 'damage', params: { target: 'enemyLeader', amount: 2 } },
@@ -9998,7 +10028,7 @@ const CARDS = [
     id: 'bergival_001', ver: 9, name: 'バージヴァル', cls: 'formation', type: 'follower',
     cost: 5, attack: 4, defense: 4, rarity: 'silver', tribe: 'none',
     keywords: ['rush'], art: 'bergival', sky: 'ash',
-    text: '突進\\nファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が25枚以下なら、「兵士」を2体場に出す。',
+    text: '突進\nファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が25枚以下なら、「兵士」を2体場に出す。',
     effects: [
       { hook: 'fanfare', type: 'discardDeck', params: { amount: 2 } },
       { hook: 'fanfare', cond: { deckMax: 25 }, type: 'summon', params: { cardId: 'soldier_001', count: 2 } }
@@ -10010,7 +10040,7 @@ const CARDS = [
     id: 'stachium_001', ver: 9, name: '王断の天宮・スタチウム', cls: 'formation', type: 'follower',
     cost: 6, attack: 4, defense: 4, rarity: 'gold', tribe: 'none',
     art: 'stachium', sky: 'gold',
-    text: 'ファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が10枚以下なら、相手のフォロワーからランダムな1体を破壊する。\\n進化時： ファンファーレ効果が働く。その後、「兵士」を3体場に出す。',
+    text: 'ファンファーレ： 自分の山札のカードをランダムに2枚捨てる。その後、自分の山札が10枚以下なら、相手のフォロワーからランダムな1体を破壊する。\n進化時： ファンファーレ効果が働く。その後、「兵士」を3体場に出す。',
     effects: [
       { hook: 'fanfare', type: 'discardDeck', params: { amount: 2 } },
       { hook: 'fanfare', cond: { deckMax: 10 }, type: 'destroy', params: { target: 'randomEnemyFollower' } },
@@ -10024,7 +10054,7 @@ const CARDS = [
     id: 'octrice_001', ver: 9, name: '空絶の顕現・オクトリス', cls: 'formation', type: 'follower',
     cost: 7, attack: 6, defense: 6, rarity: 'legend', tribe: 'none',
     art: 'octrice', sky: 'dusk',
-    text: 'ファンファーレ： バッジ「空絶の顕現」を持つ。\\n進化時： 自分の山札のカードをランダムに5枚捨てる。',
+    text: 'ファンファーレ： バッジ「空絶の顕現」を持つ。\n進化時： 自分の山札のカードをランダムに5枚捨てる。',
     effects: [
       { hook: 'fanfare', type: 'grantBadge', params: { badgeId: 'voidend' } },
       { hook: 'evolve', type: 'discardDeck', params: { amount: 5 } }
@@ -10036,7 +10066,7 @@ const CARDS = [
     id: 'doomemory_001', ver: 9, name: 'ドゥームエモリー', cls: 'formation', type: 'follower',
     cost: 1, attack: 1, defense: 1, rarity: 'bronze', tribe: 'none',
     art: 'doomemory', sky: 'night',
-    text: 'ファンファーレ： 自分の手札のカードを1枚選んで捨てる。カードを1枚引く。自分のリーダーの体力を1回復する。\\n進化時： ファンファーレ効果が働く。',
+    text: 'ファンファーレ： 自分の手札のカードを1枚選んで捨てる。カードを1枚引く。自分のリーダーの体力を1回復する。\n進化時： ファンファーレ効果が働く。',
     effects: [
       { hook: 'fanfare', type: 'discardChosen', params: { count: 1, prompt: '捨てる手札を1枚選ぶ' } },
       { hook: 'fanfare', type: 'draw', params: { amount: 1 } },
@@ -10049,7 +10079,7 @@ const CARDS = [
     id: 'graveeater_001', ver: 9, name: '捨て札の喰らいの餓鬼', cls: 'formation', type: 'follower',
     cost: 6, attack: 4, defense: 4, rarity: 'silver', tribe: 'none',
     keywords: ['ward'], art: 'graveeater', sky: 'night',
-    text: '守護\\nこのカードが山札または手札から捨てられた時、このカードを場に出す。',
+    text: '守護\nこのカードが山札または手札から捨てられた時、このカードを場に出す。',
     effects: [
       { hook: 'deckDiscarded', type: 'summon', params: { cardId: 'graveeater_001', count: 1 } },
       { hook: 'discarded', type: 'summon', params: { cardId: 'graveeater_001', count: 1 } }
@@ -10060,7 +10090,7 @@ const CARDS = [
     id: 'backwood_001', ver: 9, name: '薫交の天宮・バックウッド', cls: 'formation', type: 'follower',
     cost: 5, attack: 4, defense: 4, rarity: 'gold', tribe: 'none',
     art: 'backwood', sky: 'gold',
-    text: 'ファンファーレ： カードを2枚引く。\\n進化時： 「相手のフォロワーからランダムな1体に1ダメージ」を X 回行う。X は「30 － 自分の山札の枚数」（負の値なら0）。',
+    text: 'ファンファーレ： カードを2枚引く。\n進化時： 「相手のフォロワーからランダムな1体に1ダメージ」を X 回行う。X は「30 － 自分の山札の枚数」（負の値なら0）。',
     effects: [
       { hook: 'fanfare', type: 'draw', params: { amount: 2 } },
       { hook: 'evolve', type: 'repeatByDeckGap', params: { base: 30, each: [
@@ -10073,7 +10103,7 @@ const CARDS = [
     id: 'ezdia_001', ver: 9, name: '絶命の顕現・エズディア', cls: 'formation', type: 'follower',
     cost: 8, attack: 8, defense: 8, rarity: 'legend', tribe: 'none',
     keywords: ['ward'], art: 'ezdia', sky: 'blood',
-    text: '守護\\nファンファーレ： コストを0にした「ドゥームエモリー」を3枚手札に加える。\\n自分のターン終了時、自分の場のフォロワー全ては必殺と守護を持つ。',
+    text: '守護\nファンファーレ： コストを0にした「ドゥームエモリー」を3枚手札に加える。\n自分のターン終了時、自分の場のフォロワー全ては必殺と守護を持つ。',
     effects: [
       { hook: 'fanfare', type: 'addToHand', params: { cardId: 'doomemory_001', count: 3, setCostZero: true } },
       { hook: 'turnEnd', type: 'grantKeywords', params: { target: 'ownFollowers', keywords: ['bane', 'ward'] } }
@@ -12880,6 +12910,30 @@ const UI = {
   },
   toast(msg) { const t = el('div', 'toast', esc(msg)); document.body.appendChild(t); setTimeout(() => t.remove(), 2400); },
 
+  /* 札を並べて選ぶ場面で、効果の文をそのまま読めるようにする行をつくる。
+     札の絵は小さくて文が読めないので、絵の下に文そのものを並べる。 */
+  cardLine(c, opts) {
+    const o = opts || {};
+    const cls = CLASSES[c.cls] || CLASSES.neutral;
+    const kw = (c.keywords || []).filter(k => KEYWORDS[k]).map(k => KEYWORDS[k].name).join('・');
+    const meta = [TYPES[c.type].name,
+                  c.type === 'follower' ? `${c.attack}/${c.defense}` : null,
+                  kw || null,
+                  RARITIES[c.rarity] ? RARITIES[c.rarity].name : null,
+                  verLabel(c.ver || 1)].filter(Boolean).join(' · ');
+    return `<div class="cline" style="--c:${cls.color}">` +
+      `<span class="cl-cost tnum">${c.cost}</span>` +
+      `<div class="cl-head">${esc(c.name)}<s>${meta}</s>${o.tag ? `<span class="cl-pick">${o.tag}</span>` : ''}</div>` +
+      `<div class="cl-body${c.text ? '' : ' none'}">${c.text ? esc(c.text) : '能力なし'}</div>` +
+    '</div>';
+  },
+  cardLines(list, tagOf) {
+    return list.map((x, i) => {
+      const c = CARD_BY_ID[x.cardId || x.id || x] || x;
+      return this.cardLine(c, { tag: tagOf ? tagOf(x, i) : null });
+    }).join('');
+  },
+
   /* ---- カード面 ---- */
   cardFace(f, opts) {
     const o = opts || {}, def = CARD_BY_ID[f.cardId] || CARD_BY_ID[f.id] || f;
@@ -13125,8 +13179,12 @@ const UI = {
       const cards = el('div', 'pcards');
       ids.forEach(id => cards.appendChild(this.staticCard(id)));
       cell.appendChild(cards);
-      cell.appendChild(el('div', 'pnames', ids.map(id =>
-        `${esc(CARD_BY_ID[id].name)}<s style="text-decoration:none; color:var(--faint)">（${CARD_BY_ID[id].cost}）</s>`).join('<br>')));
+      ids.forEach(id => {
+        const c = CARD_BY_ID[id];
+        cell.appendChild(el('div', 'pnames',
+          `${esc(c.name)}<s style="text-decoration:none; color:var(--faint)">（${c.cost}）</s>`));
+        cell.appendChild(el('div', 'ptext' + (c.text ? '' : ' none'), c.text ? esc(c.text) : '能力なし'));
+      });
       opts.appendChild(cell);
     });
     body.appendChild(opts);
@@ -13890,6 +13948,7 @@ const UI = {
       w.appendChild(n); w.appendChild(el('div', 'tagline', ''));
       box.appendChild(w);
     });
+    $('#mullText').innerHTML = this.cardLines(p.hand);
     $('#mullGo').textContent = '引き直す（0枚）';
     $('#ovMull').hidden = false;
   },
@@ -13900,6 +13959,9 @@ const UI = {
       n.classList.toggle('pick', on);
       const tag = n.parentNode.querySelector('.tagline'); if (tag) tag.textContent = on ? 'REDRAW' : '';
     });
+    /* 文の側にも「引き直す」印を付ける（札と文のどちらを見ていても分かるように） */
+    const hand = G.players[UIState.mullIdx].hand;
+    $('#mullText').innerHTML = this.cardLines(hand, c => picks.indexOf(c.uid) >= 0 ? '引き直す' : null);
     $('#mullGo').textContent = `引き直す（${picks.length}枚）`;
   },
 
@@ -13908,7 +13970,8 @@ const UI = {
     const st = G.fusionUI; if (!st) return;
     const me = G.players[G.active];
     const title = $('#fusionTitle'), sub = $('#fusionSub'), box = $('#fusionCards'), foot = $('#fusionFoot');
-    box.innerHTML = ''; foot.innerHTML = '';
+    const txt = $('#fusionText');
+    box.innerHTML = ''; foot.innerHTML = ''; txt.innerHTML = '';
     if (st.stage === 'host') {
       title.textContent = '融合させる手札のカードを選ぶ';
       sub.textContent = 'CHOOSE WHICH CARD FUSES';
@@ -13918,6 +13981,7 @@ const UI = {
         w.appendChild(n);
         box.appendChild(w);
       });
+      txt.innerHTML = this.cardLines(fusionCapableCards(G.active));
       const cancel = el('button', 'btn', 'キャンセル'); cancel.dataset.fuseCancel = '1'; foot.appendChild(cancel);
     } else if (st.stage === 'material') {
       const host = me.hand.find(c => c.uid === st.hostUid);
@@ -13934,6 +13998,10 @@ const UI = {
         box.appendChild(w);
       });
       if (!box.children.length) box.appendChild(el('p', 'empty', '他に手札がない。'));
+      /* 素材にできるかどうかと、選んでいるかどうかを文の側にも出す */
+      txt.innerHTML = this.cardLines(me.hand.filter(c => c.uid !== st.hostUid), c =>
+        st.picked.indexOf(c.uid) >= 0 ? '融合する'
+          : (hostDef && canFuseInto(hostDef, c) ? null : '素材にできない'));
       const go = el('button', 'btn pri', `融合する（${st.picked.length}枚）`);
       go.dataset.fuseNext = '1'; go.disabled = st.picked.length === 0;
       foot.appendChild(go);

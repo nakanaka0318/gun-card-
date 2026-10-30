@@ -261,6 +261,134 @@ for (const [w, h, label] of [[390, 844, '縦'], [844, 390, '横'], [932, 430, '�
      sizes.land.fieldW <= 760, JSON.stringify(sizes));
 }
 
+/* ================= [D] 札を選ぶ場面で効果の文が読めるか ================= */
+{
+  const ctx = await phone(); const pg = await ctx.newPage();
+  const errs = []; pg.on('pageerror', e => errs.push(e.message));
+  await pg.route('**/*fonts.g*.com/**', r => r.abort());
+  await pg.goto(URL); await pg.waitForTimeout(900);
+
+  /* カードの説明文そのものが壊れていないか（\n が文字として出ていないか） */
+  const data = await pg.evaluate(() => ({
+    literal: CARDS.filter(c => c.text && c.text.indexOf('\\n') >= 0).map(c => c.name),
+    noText: CARDS.filter(c => !c.token && !c.text).map(c => c.name),
+    multi: CARDS.filter(c => c.text && c.text.indexOf('\n') >= 0).length
+  }));
+  ok('説明文に改行が文字のまま残っていない', data.literal.length === 0, data.literal.slice(0, 5).join(','));
+  ok('説明文のないカードは能力なしの素のカードだけ',
+     data.noText.every(n => ['兵士', '有翼の兵士', 'ゴブリン'].indexOf(n) >= 0), data.noText.join(','));
+  ok('複数行の説明文がきちんと改行として入っている', data.multi > 100, String(data.multi));
+
+  /* マリガン：札の絵では読めないので、効果の文を並べて出す */
+  const mull = await pg.evaluate(async () => {
+    startGame({ p1: { deck: { soldier_001: 40 }, cls: 'formation', name: 'P1' },
+                p2: { deck: { flam_001: 40 }, cls: 'machina', name: 'P2' }, timer: 0, first: 'p1' });
+    G.sim = false; Sfx.on = false; Bgm.on = false;
+    const P = G.players[0];
+    P.hand = ['ezdia_001', 'yube_001', 'godheart_001', 'miroku_001'].map(i => makeInstance(i, 0));
+    UI.go('battle'); UI.showMulligan(0);
+    await new Promise(r => setTimeout(r, 250));
+    const lines = [...document.querySelectorAll('#mullText .cline')];
+    const texts = lines.map(l => (l.querySelector('.cl-body').textContent || '').trim());
+    const names = lines.map(l => (l.querySelector('.cl-head').textContent || '').trim());
+    /* 札を1枚選んでから、文の側にも印が付くか */
+    document.querySelector('#mullCards .card').click();
+    await new Promise(r => setTimeout(r, 150));
+    const tagged = [...document.querySelectorAll('#mullText .cl-pick')].map(n => n.textContent);
+    return { n: lines.length, texts, names, tagged,
+             hasBreaks: texts.some(t => t.indexOf('\n') >= 0),
+             allNonEmpty: texts.every(t => t.length > 5) };
+  });
+  ok('マリガンで手札4枚ぶんの効果の文が出る', mull.n === 4 && mull.allNonEmpty, JSON.stringify(mull.texts.map(t => t.length)));
+  ok('マリガンの文にカード名と能力の中身が入っている',
+     mull.names.some(n => n.indexOf('エズディア') >= 0) && mull.texts.some(t => t.indexOf('ファンファーレ') >= 0),
+     mull.names.join(' / '));
+  ok('マリガンの文でも改行が効いている', mull.hasBreaks, '');
+  ok('引き直す札は文の側にも印が付く', mull.tagged.length === 1 && mull.tagged[0] === '引き直す', JSON.stringify(mull.tagged));
+
+  /* 融合：素材にできるかどうかも文の側で分かる */
+  const fus = await pg.evaluate(async () => {
+    const P = G.players[0];
+    document.querySelector('#ovMull').hidden = true;
+    G.phase = 'play'; G.active = 0;
+    P.hand = ['yube_001', 'soldier_001', 'godheart_001'].map(i => makeInstance(i, 0));
+    openFusionUI();
+    await new Promise(r => setTimeout(r, 250));
+    const host = document.querySelector('#fusionCards [data-fuse-host]');
+    const hostLines = document.querySelectorAll('#fusionText .cline').length;
+    if (host) host.click();
+    await new Promise(r => setTimeout(r, 250));
+    const lines = [...document.querySelectorAll('#fusionText .cline')];
+    const tags = lines.map(l => { const t = l.querySelector('.cl-pick'); return t ? t.textContent : ''; });
+    const bodies = lines.map(l => (l.querySelector('.cl-body').textContent || '').trim().length);
+    return { hostLines, matLines: lines.length, tags, bodies };
+  });
+  ok('融合で「どれに融合するか」を選ぶ時も効果の文が出る', fus.hostLines >= 1, JSON.stringify(fus));
+  ok('融合の素材を選ぶ時も効果の文が出る', fus.matLines === 2 && fus.bodies.every(n => n > 0), JSON.stringify(fus));
+  ok('素材にできない札は文の側にそう書いてある',
+     fus.tags.join(',').indexOf('素材にできない') < 0 || fus.tags.some(t => t === '素材にできない'), JSON.stringify(fus.tags));
+
+  /* 2PICK：どちらを取るか決めるのに効果の文が要る */
+  const pick = await pg.evaluate(async () => {
+    document.querySelector('#ovFusion').hidden = true;
+    UI.go('twopick');
+    await new Promise(r => setTimeout(r, 300));
+    startPickRun('p1');                                  // 側は 'p1' / 'p2'
+    await new Promise(r => setTimeout(r, 200));
+    /* リーダーを決めないと候補が出ない作りなので、ここで決めてから1回目を出す */
+    PickRun.cls = 'formation';
+    PickRun.offer = makePickOffers('formation', 1, false);
+    UI.renderPickRun();
+    await new Promise(r => setTimeout(r, 300));
+    const opts = [...document.querySelectorAll('.pickopt')];
+    const texts = opts.map(o => [...o.querySelectorAll('.ptext')].map(t => t.textContent.trim().length));
+    const names = opts.map(o => o.querySelectorAll('.pnames').length);
+    return { opts: opts.length, texts, names };
+  });
+  ok('2PICKの選択肢それぞれに効果の文が出る',
+     pick.opts >= 2 && pick.texts.every(a => a.length >= 1 && a.every(n => n > 0)), JSON.stringify(pick));
+  ok('2PICKで札ごとに名前が並ぶ', pick.names.every(n => n >= 1), JSON.stringify(pick.names));
+  ok('文を足してもページエラーなし', errs.length === 0, errs.join(' | '));
+  await ctx.close();
+}
+
+/* ================= [E] 対戦画面の段組みが崩れないか ================= */
+{
+  /* 相手の手札の裏を隠した時に、後ろの要素が1段ずつ繰り上がって
+     盤面に渡すはずの伸び代が下の帯に行ってしまう不具合があった。 */
+  for (const [w, h, label] of [[390, 844, '縦'], [1000, 445, '横']]) {
+    const ctx = await b.newContext({ viewport: { width: w, height: h }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
+    const pg = await ctx.newPage();
+    await pg.route('**/*fonts.g*.com/**', r => r.abort());
+    await pg.goto(URL); await pg.waitForTimeout(800);
+    await pg.evaluate(async () => {
+      startGame({ p1: { deck: { soldier_001: 40 }, cls: 'formation', name: 'P1' },
+                  p2: { deck: { flam_001: 40 }, cls: 'machina', name: 'P2' }, timer: 0, first: 'p1' });
+      G.sim = false; G.phase = 'play'; G.active = 0; Sfx.on = false; Bgm.on = false;
+      await beginTurn();
+      await summonCard(1, 'wadatsumi_001'); await summonCard(1, 'fairy_001');
+      UI.go('battle'); UI.renderBattle();
+    });
+    await pg.waitForTimeout(700);
+    const g = await pg.evaluate(() => {
+      const bt = document.querySelector('.bt');
+      const px = s => Math.round(parseFloat(s));
+      const rows = getComputedStyle(bt).gridTemplateRows.split(' ').map(px);
+      const hh = n => Math.round(document.querySelector(n).getBoundingClientRect().height);
+      return { rows, H: innerHeight, field: hh('.bt-field'), bottom: hh('.bt-bottom'), top: hh('.bt-top'),
+               rowOf: ['.bt-top', '.bt-ohand', '.bt-field', '.bt-bottom']
+                 .map(s => getComputedStyle(document.querySelector(s)).gridRowStart) };
+    });
+    ok(`${label}：対戦画面の段が名前で固定されている`,
+       g.rowOf.join(',') === '1,2,3,4', g.rowOf.join(','));
+    ok(`${label}：伸び代が盤面に渡っている（下の帯に奪われない）`,
+       g.field > g.bottom, JSON.stringify({ field: g.field, bottom: g.bottom, H: g.H }));
+    ok(`${label}：盤面が画面の4割以上を使う`,
+       g.field >= g.H * .4, JSON.stringify({ field: g.field, H: g.H, pct: Math.round(g.field / g.H * 100) }));
+    await ctx.close();
+  }
+}
+
 console.log(OUT.join('\n'));
 console.log('---- ' + OUT.filter(x => x.startsWith('PASS')).length + ' pass / ' + OUT.filter(x => x.startsWith('FAIL')).length + ' fail');
 await b.close();
