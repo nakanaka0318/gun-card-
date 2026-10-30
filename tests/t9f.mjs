@@ -111,7 +111,8 @@ const vol = await pg.evaluate(async () => {
   const on = Bgm.toggle(); await new Promise(r => setTimeout(r, 700));
   return { loud, muted, on, off, back: +Bgm.master.gain.value.toFixed(3), stored: Bgm.on };
 });
-ok('音楽の音量つまみが想定の範囲にある', vol.loud > .1 && vol.loud <= 1, JSON.stringify(vol));
+/* つまみ自体は BGM_LEVEL ぶん上げてあり、実際の大きさは頭を抑える装置が決める */
+ok('音楽の音量つまみが想定の範囲にある', vol.loud > .1 && vol.loud <= 2, JSON.stringify(vol));
 ok('音楽を切ると無音になる', vol.off === false && vol.muted < .01, JSON.stringify(vol));
 ok('もう一度押すと戻る', vol.on === true && vol.back > 0, JSON.stringify(vol));
 
@@ -169,7 +170,9 @@ const wav = await pg.evaluate(async () => {
 const ws = Object.values(wav);
 const brief = ws.map(w => `${w.name} peak${w.peak}/rms${w.rms}`).join(' | ');
 ok('どの曲も音が割れていない', ws.every(w => w.clipped === 0), brief);
-ok('どの曲も効果音を乗せる余地がある（最大0.45以下）', ws.every(w => w.peak <= .45), brief);
+ok('どの曲も効果音を乗せる余地がある（最大0.42以下）', ws.every(w => w.peak <= .42), brief);
+ok('頭を抑える装置が入っていて、音量を上げても上限で止まる',
+   await pg.evaluate(() => !!Bgm.limiter && BGM_CEIL > 0 && BGM_CEIL < .5), '');
 ok('どの曲も無音ではない（実際に音が出ている）', ws.every(w => w.rms > .008 && w.fill > .1), brief);
 ok('静かな曲ほど実際に静かになっている',
    wav.rule.rms < wav.deck.rms && wav.deck.rms < wav.home.rms, brief);

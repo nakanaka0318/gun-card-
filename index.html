@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
 <meta name="theme-color" content="#15100C">
 <meta name="description" content="西部劇のガンマンと荒野の呪符がぶつかる、スマホ縦持ちのカード対戦ゲーム。">
@@ -33,8 +33,18 @@ body{
   -webkit-text-size-adjust:100%; -webkit-tap-highlight-color:transparent;
   overflow:hidden; height:100vh; height:100dvh;
   overscroll-behavior:none;                    /* 引っぱって更新・横スワイプ戻るを抑える */
+  touch-action:manipulation;                   /* 二度叩きの拡大を止める（スクロールは残す） */
 }
-button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; background:none}
+/* 指で遊ぶ画面なので、文字の長押し選択と拡大操作は止める。
+   入力欄とデッキ文の書き出しだけは、選んでコピーできるよう残す。 */
+*{
+  -webkit-user-select:none; -moz-user-select:none; user-select:none;
+  -webkit-touch-callout:none;                  /* 長押しのコピー吹き出しを出さない */
+}
+input, textarea, .decktext, .selectable, .selectable *{
+  -webkit-user-select:text; -moz-user-select:text; user-select:text; -webkit-touch-callout:default;
+}
+button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; background:none; touch-action:manipulation}
 :focus-visible{outline:2px solid var(--brass-l); outline-offset:2px}
 .tnum{font-variant-numeric:tabular-nums}
 
@@ -64,7 +74,7 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 }
 .screen{flex:1; min-height:0; display:flex; flex-direction:column}
 .screen[hidden]{display:none!important}
-.scroll{overflow-y:auto; overflow-x:hidden; flex:1; min-height:0; padding-block:14px 26px; padding-left:16px; padding-right:16px}
+.scroll{overflow-y:auto; overflow-x:hidden; flex:1; min-height:0; touch-action:pan-y; padding-block:14px 26px; padding-left:16px; padding-right:16px}
 
 /* 木製看板／真鍮プレート */
 .sign{
@@ -710,6 +720,22 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 }
 @keyframes toast{0%{opacity:0; transform:translate(-50%,10px)} 10%,80%{opacity:1; transform:translate(-50%,0)} 100%{opacity:0; transform:translate(-50%,-6px)}}
 
+/* ---- デッキ編成：常に見えている操作帯 ---- */
+.deckfix{
+  flex:none; display:flex; flex-direction:column; gap:5px; padding:7px 14px 8px;
+  background:linear-gradient(#2A1F16,#1E150E); border-bottom:1px solid var(--edge);
+}
+.deckfix-row{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+.deckfix-row.sub{gap:7px}
+.deckfix .count{font-size:22px}
+.deckfix .deckbar{flex:1 1 90px; min-width:70px}
+.deckwho{
+  font-family:var(--f-type); font-size:9.5px; letter-spacing:.1em; color:var(--faint);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52%;
+}
+.deckwho b{color:var(--brass-l); font-weight:400}
+.deckfix .opt{margin-left:auto}
+
 /* ================= デッキ／カード一覧／ルール ================= */
 .deckhead{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
 .count{font-family:var(--f-num); font-size:26px; color:var(--brass-l); line-height:1}
@@ -737,15 +763,29 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 /* デッキ編成の候補一覧：グリッド表示（横5枚ずつ並べて下に続く） */
 .deckgrid{--cw:62px; --gap:5px; display:grid; grid-template-columns:repeat(5, var(--cw)); justify-content:space-between; gap:9px var(--gap); margin-top:10px}
 .deckgrid .gcell{
-  display:flex; flex-direction:column; align-items:center; gap:3px; padding:3px 1px 4px;
-  border:1px solid transparent; border-radius:var(--r); background:transparent;
+  display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 1px 4px;
+  border:1px solid transparent; border-radius:var(--r); background:transparent; overflow:visible;
 }
 .deckgrid .gcell.has{border-color:var(--brass-d); background:#2A2016}
+.deckgrid .gcard{position:relative; display:block; padding:0; background:none; border:0}
+.deckgrid .gcard .gn{                         /* 入っている枚数。札の右上に大きく出す */
+  position:absolute; right:-3px; top:-4px; z-index:20;   /* 札の外枠（z-index 6〜7）より前に出す */ min-width:19px; height:19px; padding:0 4px;
+  border-radius:10px; display:grid; place-items:center;
+  font-family:var(--f-num); font-weight:600; font-size:12px; line-height:1;
+  background:linear-gradient(#C08C33,#8A5C18); border:1px solid #F0DCA6; color:#26170A;
+  box-shadow:0 1px 4px rgba(0,0,0,.6);
+}
+.deckgrid .gcell:not(.has) .gcard .gn{display:none}
 .deckgrid .gcell{width:var(--cw)}
 .deckgrid .gstep{display:flex; align-items:center; justify-content:center; gap:1px; width:100%}
-.deckgrid .gstep .btn{padding:1px 0; min-width:0; flex:1; font-size:12px; line-height:1.3}
+.deckgrid .gstep .btn{padding:1px 0; min-width:0; flex:1; font-size:11px; line-height:1.3}
 .deckgrid .gstep .n{font-family:var(--f-num); font-size:13px; min-width:1.5em; text-align:center; color:var(--brass-l); flex:none}
 .deckgrid .gcell:not(.has) .gstep .n{color:var(--faint)}
+.deckgrid .ghint{
+  grid-column:1/-1; font-size:11px; line-height:1.7; color:var(--mute);
+  background:#201810; border:1px solid var(--edge); border-left:2px solid var(--brass-d);
+  border-radius:0 3px 3px 0; padding:6px 10px; margin-bottom:2px;
+}
 .deckgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:8px; margin-top:2px}
 .entry{display:flex; align-items:center; gap:10px; padding:6px 8px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
 .entry .mini{--cw:34px}
@@ -846,6 +886,26 @@ select,input[type=text]{
   .home-in{grid-template-columns:1fr; align-content:start}
   .detail{grid-template-columns:1fr; justify-items:center}
 }
+/* 横持ちのスマホ（背が低く横に広い）。縦にゆとりが無いぶん、
+   相手の手札の裏と余白を削って札を大きくし、盤面を画面の真ん中にまとめる。 */
+@media (orientation:landscape) and (max-height:560px){
+  :root{--hUnit:clamp(58px,24vh,108px)}
+  .bt-ohand{display:none}                      /* 手札の枚数は上の帯に出ているので裏は省く */
+  .bt-top{padding:3px 8px}
+  .lead{padding:2px 6px}
+  .lead .em{width:22px; height:22px; font-size:11px}
+  .life .v{font-size:19px}
+  .bt-field{padding:1px 4px; gap:clamp(3px,1.2vh,10px); max-width:720px; margin-inline:auto; width:100%}
+  .badges{align-self:center}                   /* 画面端に離れて見えないよう、盤面と一緒に中央へ */
+  .mid{padding:0 4px}
+  .bt-bottom{padding:3px 8px 4px; gap:6px}
+  .hand{--handScale:.92; padding-top:6px; min-height:0}
+  .self{gap:2px}
+  .self .pips{max-width:120px}
+  .endbtn{padding:4px 14px}
+  .actbtn{padding:4px 8px}
+  .stancebox{top:34px; max-width:30vw}
+}
 @media (orientation:portrait){
   :root{--hUnit:clamp(64px,12.5vh,124px)}
   .bt-top{flex-wrap:wrap; row-gap:4px; padding:5px 7px}
@@ -880,6 +940,9 @@ select,input[type=text]{
   .libmain{min-height:40px}                              /* デッキ一覧の行そのものが押しボタン */
   input[type=checkbox]{width:22px; height:22px; flex:none}
   label:has(> input[type=checkbox]){min-height:40px}
+  /* 決闘中にいちばん押す場所。横持ちで詰めても押せる高さは割らない */
+  .endbtn{min-height:44px; display:inline-flex; align-items:center; justify-content:center}
+  .actbtn{min-height:40px; min-width:44px; display:inline-flex; align-items:center; justify-content:center}
 }
 </style>
 
@@ -1020,23 +1083,25 @@ select,input[type=text]{
       <h2>デッキ編成</h2>
       <span class="tag">DECK BUILDER</span>
     </div>
-    <div class="scroll">
-      <div class="panel">
-        <div class="deckhead" style="justify-content:space-between">
-          <h3 style="margin:0">保存済みデッキ</h3>
-          <div class="opt">
-            <button class="btn sm" id="deckNewBlank">＋ 空のデッキ</button>
-            <button class="btn sm" id="deckNewSoldier">＋ 兵士と魔術師</button>
-            <button class="btn sm" id="deckNewStandard">＋ 標準構成40枚</button>
-          </div>
-        </div>
-        <div class="decklib" id="deckLib"></div>
+    <!-- 常に見えている操作帯。ここだけでカードを足し引きできるようにし、
+         細かい設定は「設定」を開いたときだけ出す（開く前からカードが見えるようにするため）。 -->
+    <div class="deckfix">
+      <div class="deckfix-row">
+        <span class="count tnum" id="deckCount">0<s>/40</s></span>
+        <div class="deckbar"><i id="deckBar" style="width:0%"></i></div>
+        <button class="chip" id="deckOnlyIn" type="button" aria-pressed="false">デッキの中だけ</button>
+        <button class="chip" id="deckOptsBtn" type="button" aria-pressed="false">設定</button>
       </div>
-      <div class="panel">
+      <div class="deckfix-row sub">
+        <span class="deckwho" id="deckWho"></span>
+        <div class="opt" id="deckViewMode"></div>
+      </div>
+    </div>
+    <div class="scroll">
+      <div class="panel" id="deckOpts" hidden>
+        <h3>このデッキ</h3>
         <div class="deckhead">
           <input type="text" id="deckName" class="deckname-input" maxlength="20" placeholder="デッキ名">
-          <span class="count" id="deckCount">0<s>/40</s></span>
-          <div class="deckbar"><i id="deckBar" style="width:0%"></i></div>
           <button class="btn sm" id="deckCopy">デッキ文をコピー</button>
           <button class="btn sm" id="deckClear">全て外す</button>
         </div>
@@ -1054,11 +1119,17 @@ select,input[type=text]{
           <div><label for="deckVer">VER（候補一覧の絞り込み）</label><select id="deckVer"></select></div>
           <div><label for="deckTextQ">説明文（効果の言葉）</label><input type="text" id="deckTextQ" placeholder="例：ファンファーレ"></div>
         </div>
-        <label class="hint" style="display:block; margin:10px 0 4px">候補一覧の表示</label>
-        <div class="opt" id="deckViewMode"></div>
         <label class="hint" style="display:block; margin:10px 0 4px">候補一覧の並び順</label>
         <div class="opt" id="deckSortMode"></div>
         <p class="note" id="deckMsg"></p>
+
+        <h3 style="margin-top:16px">保存済みデッキ</h3>
+        <div class="opt">
+          <button class="btn sm" id="deckNewBlank">＋ 空のデッキ</button>
+          <button class="btn sm" id="deckNewSoldier">＋ 兵士と魔術師</button>
+          <button class="btn sm" id="deckNewStandard">＋ 標準構成40枚</button>
+        </div>
+        <div class="decklib" id="deckLib"></div>
       </div>
       <div class="list" id="deckList"></div>
     </div>
@@ -1436,8 +1507,10 @@ const BGM_FOR_SCREEN = {
   deck: 'deck', cards: 'deck', rule: 'rule', matchup: 'matchup', battle: 'battle'
 };
 
-/* 音楽全体の音量。効果音の瞬間音（最大0.6ほど）と足しても割れないところに置く */
-const BGM_LEVEL = 1.0;
+/* 音楽全体の音量と、これ以上は大きくしない上限。
+   効果音の瞬間音（最大0.6ほど）と足しても振り切らないところに置く。 */
+const BGM_LEVEL = 1.5;
+const BGM_CEIL = 0.30;   /* 2x で均すときに少し跳ねるので、実測の最大が0.4前後に収まる値にしてある */
 const Bgm = {
   on: store.get('music', true), key: null, timer: null, master: null,
   step: 0, nextAt: 0, track: null,
@@ -1449,7 +1522,18 @@ const Bgm = {
     if (!this.master) {
       this.master = ac.createGain();
       this.master.gain.value = 0;
-      this.master.connect(ac.destination);
+      /* 音の重なり方しだいで瞬間的に大きくなるので、頭をなだらかに抑える装置を通す。
+         createDynamicsCompressor は内部で持ち上げも入って逆に大きくなるため使わず、
+         曲線で丸める（BGM_CEIL を超えない）。こうすると効果音を重ねても振り切らない。 */
+      const shaper = ac.createWaveShaper();
+      const N = 1024, curve = new Float32Array(N);
+      for (let i = 0; i < N; i++) {
+        const x = (i / (N - 1)) * 2 - 1;
+        curve[i] = BGM_CEIL * Math.tanh(x / BGM_CEIL);
+      }
+      shaper.curve = curve; shaper.oversample = '2x';
+      this.master.connect(shaper); shaper.connect(ac.destination);
+      this.limiter = shaper;
     }
     return this.master;
   },
@@ -12742,9 +12826,10 @@ let MatchupTable = null, MatchupBusy = false;             // 相性検証：直�
 let MatchupTableVer = null;                               // その結果がどのバージョンのものか
 let FormatVerFilter = '';                                 // フォーマットデッキ一覧の絞り込み（''＝すべて）
 let showNeutralPool = store.get('showNeutralPool', true);   // 候補一覧にエニグマ（ニュートラル）を表示するか。表示/非表示はデッキの中身に影響しない
-let DeckViewMode = store.get('deckViewMode', 'list');      // 候補一覧の表示：'list'（横1枚ずつ）／'grid'（横5枚）
+let DeckViewMode = store.get('deckViewMode', 'grid');      // 候補一覧の表示：'grid'（横5枚）／'list'（横1枚ずつ）
+let DeckOnlyIn = false;                                    // デッキに入っている札だけを出すか（画面を開くたび解除）
 let DeckSortMode = store.get('deckSortMode', 'ver');       // 候補一覧の並び順：'ver'（ver優先）／'cost'（コスト優先）
-const DECK_VIEWS = [['list', '一覧'], ['grid', 'グリッド（横5枚）']];
+const DECK_VIEWS = [['grid', '並べる'], ['list', '詳しく見る']];
 const DECK_SORTS = [['ver', 'ver → コスト'], ['cost', 'コスト → ver']];
 /* カードの並び替え。ver優先／コスト優先を切り替える（どちらも最後は名前順） */
 function cardSortBy(mode) {
@@ -12784,7 +12869,7 @@ const UI = {
     if (name === 'setup') this.renderSetup();
     if (name === 'twopick') this.renderTwoPick();
     if (name === 'pickrun') this.renderPickRun();
-    if (name === 'deck') this.renderDeck();
+    if (name === 'deck') { DeckOnlyIn = false; const o = $('#deckOpts'); if (o) o.hidden = true; this.renderDeck(); }
     if (name === 'community') { communitySubscribe(); this.renderCommunity(); }
     if (name === 'format') this.renderFormat();
     if (name === 'matchup') this.renderMatchup();
@@ -13077,6 +13162,9 @@ const UI = {
     /* ---- 編集中デッキ ---- */
     $('#deckName').value = d.name;
     const total = deckTotal(d);
+    $('#deckWho').innerHTML = `<b>${esc(d.name) || '(無題のデッキ)'}</b> &middot; ${CLASSES[d.cls].kana}`;
+    $('#deckOnlyIn').setAttribute('aria-pressed', String(DeckOnlyIn));
+    $('#deckOptsBtn').setAttribute('aria-pressed', String(!$('#deckOpts').hidden));
     $('#deckCount').innerHTML = `${total}<s>/${RULES.deckSize}</s>`;
     $('#deckBar').style.width = Math.min(100, total / RULES.deckSize * 100) + '%';
     $('#deckLimit').checked = !!d.limit;
@@ -13123,28 +13211,44 @@ const UI = {
 
     const tq = $('#deckTextQ').value.trim();
     const pool = CARDS.filter(c => !c.token && (!verF || c.ver === +verF) &&
-      (c.cls === d.cls || (c.cls === 'neutral' && showNeutralPool)) && cardTextMatches(c, tq));
+      (c.cls === d.cls || (c.cls === 'neutral' && showNeutralPool)) && cardTextMatches(c, tq) &&
+      (!DeckOnlyIn || (d.list[c.id] || 0) > 0));
     pool.sort(deckPoolSort);
     const list = $('#deckList');
     list.innerHTML = '';
     list.className = DeckViewMode === 'grid' ? 'deckgrid' : 'list';
     if (!pool.length) {
       list.className = 'list';
-      list.appendChild(el('p', 'empty', tq ? `説明文に「${esc(tq)}」を含む候補がない。` : '候補がない。'));
+      list.appendChild(el('p', 'empty',
+        DeckOnlyIn ? 'このデッキにはまだ1枚も入っていない。「デッキの中だけ」を解除すると候補が出る。'
+                   : (tq ? `説明文に「${esc(tq)}」を含む候補がない。` : '候補がない。')));
       return;
     }
     if (DeckViewMode === 'grid') {
       /* グリッド表示：横に5枚並べて下に続く。並び順の先頭のまとまりごとに見出しを入れる */
+      list.appendChild(el('div', 'ghint',
+        '札を押すと1枚入る。効果の文を読むときは「詳しく見る」に切り替えて札を押す。'));
       let lastGroup = null;
       pool.forEach(c => {
         const group = groupLabelFor(c, DeckSortMode);
         if (group !== lastGroup) { lastGroup = group; list.appendChild(el('div', 'glabel', group)); }
         const n = d.list[c.id] || 0;
         const cell = el('div', 'gcell' + (n ? ' has' : ''));
-        cell.appendChild(this.staticCard(c.id));
-        const st = el('div', 'gstep');
-        st.innerHTML = `<button class="btn sm" data-dec="${c.id}">&minus;</button><span class="n tnum">${n}</span><button class="btn sm" data-inc="${c.id}">+</button>`;
-        cell.appendChild(st);
+        /* 札そのものが「1枚足す」ボタン。細かい増減は下の ＋ − で行う */
+        const pick = el('button', 'gcard');
+        pick.type = 'button';
+        pick.dataset.inc = c.id;
+        pick.setAttribute('aria-label', `${c.name} を1枚加える（現在${n}枚）`);
+        pick.appendChild(this.staticCard(c.id));
+        pick.appendChild(el('span', 'gn tnum', String(n)));
+        cell.appendChild(pick);
+        /* 入っている札だけ ＋ − を出す。0枚の札は札そのものを押せば入るので、
+           並びが軽くなって一度に見える枚数が増える。 */
+        if (n > 0) {
+          const st = el('div', 'gstep');
+          st.innerHTML = `<button class="btn sm" data-dec="${c.id}" aria-label="${esc(c.name)} を1枚減らす">&minus; 1枚</button>`;
+          cell.appendChild(st);
+        }
         list.appendChild(cell);
       });
       this.sizeDeckGrid();
@@ -14256,6 +14360,21 @@ function initEvents() {
     pickTake(+opt.dataset.pickTake);
   });
 
+  /* デッキ編成：常に見えている操作帯の切り替え */
+  $('#deckOptsBtn').addEventListener('click', () => {
+    const box = $('#deckOpts');
+    box.hidden = !box.hidden;
+    $('#deckOptsBtn').setAttribute('aria-pressed', String(!box.hidden));
+    if (!box.hidden) box.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    Sfx.play('click');
+  });
+  $('#deckOnlyIn').addEventListener('click', () => {
+    DeckOnlyIn = !DeckOnlyIn;
+    UI.renderDeck();
+    const sc = $('#sc-deck .scroll'); if (sc) sc.scrollTop = 0;
+    Sfx.play('click');
+  });
+
   /* デッキ編成：保存済みデッキの選択・複製・削除 */
   $('#deckLib').addEventListener('click', e => {
     const pick = e.target.closest('[data-pick-deck]');
@@ -14588,6 +14707,29 @@ function updateMuteLabel() {
     : '♫ 音楽 OFF';
 }
 
+/* 指で遊ぶ前提の画面なので、端末まかせの拡大と長押しメニューを止める。
+   CSS（user-select / touch-action）だけでは塞げない分をここで補う。
+   入力欄とデッキ文の書き出しは対象外にして、選んでコピーできるままにする。 */
+function inText(t) { return !!(t && t.closest && t.closest('input, textarea, .decktext, .selectable')); }
+function blockZoomAndSelect() {
+  /* iOS のつまんで拡大 */
+  ['gesturestart', 'gesturechange', 'gestureend'].forEach(ev =>
+    document.addEventListener(ev, e => e.preventDefault(), { passive: false }));
+  /* 2本指のつまみ操作 */
+  document.addEventListener('touchmove', e => { if (e.touches.length > 1) e.preventDefault(); }, { passive: false });
+  /* 二度叩きの拡大（touch-action が効かない端末向けの保険） */
+  let lastTap = 0;
+  document.addEventListener('touchend', e => {
+    const now = Date.now();
+    if (now - lastTap < 320 && !inText(e.target)) e.preventDefault();
+    lastTap = now;
+  }, { passive: false });
+  /* 長押しの選択メニュー（Android）と右クリックメニュー */
+  document.addEventListener('contextmenu', e => { if (!inText(e.target)) e.preventDefault(); });
+  /* 長押しで始まる文字選択そのもの */
+  document.addEventListener('selectstart', e => { if (!inText(e.target)) e.preventDefault(); });
+}
+
 /* ---- 試合進行 ---- */
 /* mode: 'pvp'（1人回し）／'pve'（相手はAI。ハンデを付けられる） */
 /* over: 2PICKなど、保存済みデッキ以外で戦うときの指定 { d1, d2, handicaps, save } */
@@ -14679,6 +14821,7 @@ function boot() {
   };
   ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, wake, { once: true, passive: true }));
+  blockZoomAndSelect();
   updateMuteLabel();
   UI.go('home');
   /* 公開ページの更新で状態を失わないように保存する */
