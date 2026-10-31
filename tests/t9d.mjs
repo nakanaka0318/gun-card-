@@ -16,7 +16,9 @@ await pg.goto(PAGE); await pg.waitForTimeout(900);
 /* --- ルールブックに新しい用語が出る --- */
 await pg.evaluate(() => UI.go('rule')); await pg.waitForTimeout(500);
 const ruleTxt = await pg.evaluate(() => $('#ruleAcc').textContent);
-ok('ルールブックに「エンハンス」の説明がある', ruleTxt.includes('エンハンス') && ruleTxt.includes('エンハンスX'), '');
+ok('ルールブックに「成長」の説明がある',
+   ruleTxt.includes('成長') && ruleTxt.includes('このカードのコストはXになり'), '');
+ok('ルールブックにエンハンスが残っていない', !ruleTxt.includes('エンハンス'), '');
 ok('ルールブックに「山札で捨てられた時」の説明がある', ruleTxt.includes('山札で捨てられた時'), '');
 
 /* --- カード一覧に ver9 が出て、絞り込みも効く --- */

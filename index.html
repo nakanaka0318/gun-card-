@@ -661,12 +661,6 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 #fusionCards.mull .card.pick{transform:translateY(-8px) scale(1.03); filter:none;
   box-shadow:0 0 0 3px #F0C971, 0 6px 16px rgba(240,200,113,.5)}
 #fusionCards.mull .card.disabled{filter:grayscale(.9) brightness(.45); cursor:not-allowed; pointer-events:none}
-.card .c-en{
-  position:absolute; left:4px; top:calc(var(--cw)*.34); z-index:5; padding:0 4px; border-radius:3px;
-  font-family:var(--f-num); font-weight:600; font-size:calc(var(--cw)*.19); line-height:1.3;
-  color:#07241C; background:linear-gradient(#8ED8B4,#3E8C6A); border:1px solid #16543C;
-  box-shadow:0 0 6px rgba(120,210,170,.5);
-}
 .card .c-fu{
   position:absolute; left:5px; top:calc(var(--cw)*.34); z-index:5; padding:0 4px; border-radius:3px;
   font-family:var(--f-num); font-weight:600; font-size:calc(var(--cw)*.19); line-height:1.3;
@@ -1757,7 +1751,6 @@ const KEYWORDS = {
   bane:       { name: '必殺',   glyph: '必', desc: 'ステータスに関係なく、このフォロワーと戦闘したフォロワーを破壊する（自分が攻撃した時・相手に攻撃された時のどちらでも発動する）。' },
   growth:     { name: '成長',   glyph: '成', desc: '自分のPPがX以上のとき、このカードのコストはXになり「成長効果」を得る。PPがX未満なら元のコストのまま。成長が複数段あるカードは、払えるうちで一番高い段が適用され、それ以下の段の効果も全て働く。' },
   okugi:      { name: '奥義',   glyph: '奥', desc: '奥義X ＝「自分のターン数」＋「このカードが手札にある間にフォロワーが進化した回数」。その値が X 以上のときにプレイすると、奥義の効果が働く。奥義が複数段あるカードは、条件を満たした段の効果が全て働く。効果の書き方がない奥義はファンファーレとして働く。手札のカードの左上に現在の奥義値が出る。' },
-  enhance:    { name: 'エンハンス', glyph: 'E', desc: 'エンハンスX ＝ プレイする時点で自分のPPがX以上なら、追加の効果が働く。コストは変わらない（X払うわけではない）ので、X以上のPPを残したまま出せば必ず働く。PPはプレイした瞬間の、コストを払う前の値で数える。手札のカードの右上に E が出る。' },
   fusion:     { name: '融合',   glyph: '融', desc: '融合は手札で行う。このカードが手札にある間、画面下の「融合」ボタンから、条件に合う自分の手札を選んで融合できる（融合先が複数あるときは先にどのカードに融合させるか選ぶ）。選んだ手札は1枚でも複数枚でもよく、融合すると全て消滅して、このカードの融合した枚数・種類が増える。増えた枚数・種類を条件にした効果はカードごとに異なる（そのまま手札で姿を変えるものもある）。融合しただけでは場には出ないので、融合を済ませたカードは改めて手札からプレイする。カードの左上に、今まで融合した種類の数が出る。' }
 };
 /* 能力の発動タイミング（カードテキストの語） */
@@ -9999,10 +9992,10 @@ const CARDS = [
   {
     id: 'fildore_001', ver: 9, name: '楽朗の天宮・フィルドア', cls: 'neutral', type: 'follower',
     cost: 2, attack: 2, defense: 2, rarity: 'gold', tribe: 'none',
-    enhance: 5, art: 'fildore', sky: 'gold',
-    text: 'エンハンス5： このフォロワーは進化する。\nこのフォロワーが進化した時、相手のフォロワーからランダムな1体を破壊する。',
+    growth: { cost: 5 }, art: 'fildore', sky: 'gold',
+    text: '成長5： このフォロワーは進化する。\nこのフォロワーが進化した時、相手のフォロワーからランダムな1体を破壊する。',
     effects: [
-      { hook: 'fanfare', cond: { enhanceMin: 5 }, type: 'evolveSelf', params: {} },
+      { hook: 'fanfare', cond: { grown: true }, type: 'evolveSelf', params: {} },
       { hook: 'onEvolve', type: 'destroy', params: { target: 'randomEnemyFollower' } }
     ],
     flavor: '楽の音が高く鳴るほど、天宮の門は低く開く。'
@@ -10699,7 +10692,6 @@ async function playCard(uid, slotIdx) {
   c._grownAt = grownTier(c);                               // どの成長の段で出したかをコストを払う前に固定
   c._grown = c._grownAt > 0;
   c._okugiAt = okugiValue(c);                              // 奥義値もプレイした瞬間で固定する
-  c._enhanceAt = p.pp;                                     // エンハンス：コストを払う前のPPを固定する
   {
     const reached = okugiReached(c);
     if (okugiTiers(CARD_BY_ID[c.cardId]).length) {
@@ -11050,11 +11042,6 @@ function condOK(cond, source, extra) {
   if (cond.deckMin != null) {                              // 自分の山札の枚数が指定以上
     const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
     if (!P || P.deck.length < cond.deckMin) return false;
-  }
-  if (cond.enhanceMin != null) {                           // エンハンスX：プレイした瞬間のPPで判定する
-    const P = source && G.players[source.owner];
-    const at = (source && source._enhanceAt != null) ? source._enhanceAt : (P ? P.pp : 0);
-    if (at < cond.enhanceMin) return false;
   }
   if (cond.boardHasSuperEvolved) {                         // 自分の場に超進化したフォロワーがいる
     const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
@@ -12980,8 +12967,6 @@ const UI = {
     }
     /* 融合：手札や場のカードなら融合済みの種類数、カード一覧では記号のみ */
     const fuLabel = def.fusion ? (f.uid ? ('融' + ((f.fusedIds && f.fusedIds.length) || 0)) : '融') : null;
-    /* エンハンス：しきい値をそのまま出す（払う値ではなく、残っていれば働く値） */
-    const enLabel = def.enhance ? ('E' + def.enhance) : null;
     const c = el('div', 'card' + (o.extra ? ' ' + o.extra : ''));
     c.style.setProperty('--c', cls.color);
     c.style.setProperty('--cd2', cls.deep || '#4A3A22');
@@ -12995,7 +12980,6 @@ const UI = {
       (xv != null ? `<span class="c-x tnum">X${xv}</span>` : '') +
       (okLabel ? `<span class="c-ok tnum">${okLabel}</span>` : '') +
       (fuLabel ? `<span class="c-fu tnum">${fuLabel}</span>` : '') +
-      (enLabel ? `<span class="c-en tnum">${enLabel}</span>` : '') +
       ((f.extraEffects && f.extraEffects.length) ? '<span class="c-curse">&#21610;</span>' : '') +
       (kws.length ? `<span class="c-kw">${kws.slice(0, 4).map(k => `<i>${KEYWORDS[k].glyph}</i>`).join('')}</span>` : '') +
       `<div class="c-name"><span class="c-clsmark">${cls.glyph}</span><span class="c-rar"></span>` +

@@ -72,11 +72,16 @@ ok('指定のないトークン扱いをしていない', A.tokens.length === 0,
 
 /* ---------- [B] 用語集の網羅 ---------- */
 const Bx = await pg.evaluate(() => ({
-  enhanceKw: !!KEYWORDS.enhance, deckDiscarded: !!ABILITY_TERMS.deckDiscarded,
+  growthKw: !!KEYWORDS.growth, enhanceGone: !KEYWORDS.enhance,
+  enhanceCards: CARDS.filter(c => c.enhance).map(c => c.name),
+  deckDiscarded: !!ABILITY_TERMS.deckDiscarded,
   rudeman: !!BADGES.rudeman, voidend: !!BADGES.voidend,
   badgeDesc: [BADGES.rudeman, BADGES.voidend].every(x => x && x.name && x.desc && x.kana && x.glyph)
 }));
-ok('キーワード「エンハンス」が用語集にある', Bx.enhanceKw, '');
+ok('キーワード「成長」が用語集にある', Bx.growthKw, '');
+/* エンハンスは仕様の書き間違いだった。どのカードも使っていないので、用語集にも残さない */
+ok('使われていないエンハンスが用語集に残っていない',
+   Bx.enhanceGone && Bx.enhanceCards.length === 0, Bx.enhanceCards.join(','));
 ok('「山札で捨てられた時」が用語集にある', Bx.deckDiscarded, '');
 ok('バッジ2種が登録され説明も揃っている', Bx.rudeman && Bx.voidend && Bx.badgeDesc, JSON.stringify(Bx));
 

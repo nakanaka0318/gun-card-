@@ -1,4 +1,4 @@
-/* ver9 の新しい仕組み（山札で捨てる・エンハンス・融合:カード・デッキ切れ勝利）の挙動 */
+/* ver9 の新しい仕組み（山札で捨てる・融合:カード・デッキ切れ勝利）の挙動 */
 import pw from '/opt/node22/lib/node_modules/playwright/index.js';
 const { chromium } = pw;
 import { fileURLToPath, pathToFileURL } from 'node:url';
@@ -77,19 +77,30 @@ const t4 = await pg.evaluate(async () => {
 ok('セントリーナイトは山札が多い時はリーダーを殴らない', t4.afterBig === t4.l0, JSON.stringify(t4));
 ok('セントリーナイトは山札10枚以下でリーダーに2ダメージ', t4.afterSmall === t4.afterBig - 2, JSON.stringify(t4));
 
-/* --- エンハンス5：PPを5以上残して出した時だけ進化する --- */
+/* --- 成長5：PPが5以上あるとコストが5になり、成長の効果（進化）が働く --- */
 const t5 = await pg.evaluate(async () => {
   const P = await fresh();
-  await playNew('fildore_001', 4);                        // PP4 → エンハンス不成立
+  P.pp = 4;
+  const c1 = makeInstance('fildore_001', 0); P.hand.push(c1);
+  const a = { costShown: costOf(c1), grown: grownNow(c1) };
+  G.active = 0; await playCard(c1.uid);
   const low = P.board[P.board.length - 1];
-  const a = { evolved: low.evolved, at: low._enhanceAt };
-  P.board = [];
-  await playNew('fildore_001', 7);                        // PP7 → 成立
-  const hi = P.board[P.board.length - 1];
-  return { a, b: { evolved: hi.evolved, at: hi._enhanceAt, atk: hi.attack, hp: hi.hp } };
+  Object.assign(a, { evolved: low.evolved, atk: low.attack, hp: low.hp, ppLeft: P.pp });
+  const P2 = G.players[0]; P2.board = []; P2.hand = []; P2.pp = 5;
+  const c2 = makeInstance('fildore_001', 0); P2.hand.push(c2);
+  const bb = { costShown: costOf(c2), grown: grownNow(c2) };
+  await playCard(c2.uid);
+  const hi = P2.board[P2.board.length - 1];
+  Object.assign(bb, { evolved: hi.evolved, atk: hi.attack, hp: hi.hp, ppLeft: P2.pp });
+  return { a, b: bb, def: { base: CARD_BY_ID.fildore_001.cost, growth: CARD_BY_ID.fildore_001.growth } };
 });
-ok('エンハンス5はPP4では働かない', t5.a.evolved === false && t5.a.at === 4, JSON.stringify(t5.a));
-ok('エンハンス5はPP7で働いて進化する', t5.b.evolved === true && t5.b.atk === 4 && t5.b.hp === 4, JSON.stringify(t5.b));
+ok('フィルドアは成長5のカード（素のコストは2）',
+   t5.def.base === 2 && t5.def.growth && t5.def.growth.cost === 5, JSON.stringify(t5.def));
+ok('成長5はPP4では働かず、2コストのまま進化しない',
+   t5.a.costShown === 2 && t5.a.grown === false && t5.a.evolved === false && t5.a.ppLeft === 2, JSON.stringify(t5.a));
+ok('成長5はPP5以上でコストが5になり、進化して4/4になる',
+   t5.b.costShown === 5 && t5.b.grown === true && t5.b.evolved === true &&
+   t5.b.atk === 4 && t5.b.hp === 4 && t5.b.ppLeft === 0, JSON.stringify(t5.b));
 
 /* --- フィルドア：効果で進化しても「進化した時」は働く（onEvolve） --- */
 const t6 = await pg.evaluate(async () => {
