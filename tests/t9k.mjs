@@ -86,13 +86,40 @@ ok('ターン数と先攻後攻も残る', added.turns === 9 && added.first === 
 const unit = await pg.evaluate(() => {
   document.querySelector('[data-rec-unit="deck"]').click();
   const decks = [...document.querySelectorAll('#recOut .mtx tbody th')].map(x => x.textContent.trim());
+  const heads = [...document.querySelectorAll('#recOut .mtx thead th')].map(x => x.textContent.trim());
   document.querySelector('[data-rec-unit="class"]').click();
   const cls = [...document.querySelectorAll('#recOut .mtx tbody th')].map(x => x.textContent.trim());
-  return { decks, cls };
+  return { decks, heads, cls };
 });
-ok('自分のデッキ単位に切り替えられる',
-   unit.decks.length === 2 && unit.decks.join().indexOf('ディスカ') >= 0, JSON.stringify(unit.decks));
+/* 自分が使ったデッキ（ディスカ・スペル）と、相手に使ったデッキ（購入・バッジ・リノ）の両方が行に出る */
+ok('デッキ同士の表になり、相手に使ったデッキも行に出る',
+   unit.decks.length === 5 && ['ディスカ', 'スペル', '購入', 'バッジ', 'リノ'].every(n => unit.decks.indexOf(n) >= 0),
+   JSON.stringify(unit.decks));
+ok('横の見出しもデッキ名になる',
+   unit.heads.indexOf('購入') >= 0 && unit.heads[0].indexOf('デッキ') >= 0, JSON.stringify(unit.heads));
 ok('クラス単位に戻せる', unit.cls.length === 5, JSON.stringify(unit.cls));
+
+/* ---------- 同じクラス同士でも、勝った側と負けた側の両方が残る ---------- */
+const mirror = await pg.evaluate(() => {
+  const keep = MyRecords.slice();
+  MyRecords = [];
+  addRecord({ meCls: 'formation', meDeck: 'ver1フォメ', oppCls: 'formation', oppDeck: 'ver2フォメ',
+              first: 'opp', result: 'win', turns: 16, note: '' });
+  RecUnit = 'deck'; UI.renderRecordOut();
+  const read = () => [...document.querySelectorAll('#recOut .mtx tbody tr')].map(tr => ({
+    name: tr.querySelector('th').textContent.trim(),
+    cells: [...tr.querySelectorAll('td')].map(td => td.textContent.trim())
+  }));
+  const rows = read();
+  MyRecords = keep; saveRecords(); RecUnit = 'class'; UI.renderRecord();
+  return rows;
+});
+ok('片方しか記録しなくても両方のデッキが行に出る', mirror.length === 2,
+   JSON.stringify(mirror.map(r => r.name)));
+ok('勝った側は勝ちとして出る',
+   /100%/.test((mirror[0] || {}).cells[1] || '') && /1-0/.test(mirror[0].cells[1]), JSON.stringify(mirror[0]));
+ok('負けた側は裏返して負けとして出る',
+   /0%/.test((mirror[1] || {}).cells[0] || '') && /0-1/.test(mirror[1].cells[0]), JSON.stringify(mirror[1]));
 
 /* ---------- 決着の画面から1押しで残す ---------- */
 const fromResult = await pg.evaluate(async () => {
