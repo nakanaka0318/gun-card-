@@ -186,5 +186,47 @@ ok('相性表は箱の中で横に巻く（画面を押し広げない）', layo
 ok('戦績があるときは相性表が出ている', layout.table, '');
 ok('戦績の画面でページエラーなし', errs.length === 0, errs.join(' | '));
 
+/* ---------- 決闘の準備：自分のデッキからランダムに選ぶ ---------- */
+const rnd = await pg.evaluate(() => {
+  FORMAT_DECKS.slice(0, 5).forEach((f, i) =>
+    Decks.push({ id: 'fd' + i, name: f.name, cls: f.cls, list: JSON.parse(JSON.stringify(f.list)), limit: true }));
+  Decks.push({ id: 'half', name: '未完成', cls: 'accel', list: { goblin_001: 3 }, limit: true });
+  saveDecks(); UI.go('setup');
+  const picks = []; let same = 0;
+  for (let i = 0; i < 30; i++) {
+    const before = MatchDecks.p1;
+    document.getElementById('p1DeckRand').click();
+    if (MatchDecks.p1 === before) same++;
+    picks.push(MatchDecks.p1);
+    document.getElementById('p2DeckRand').click();
+    picks.push(MatchDecks.p2);
+  }
+  return {
+    both: !!document.getElementById('p1DeckRand') && !!document.getElementById('p2DeckRand'),
+    uniq: [...new Set(picks)].length, same,
+    half: picks.indexOf('half') >= 0,
+    selSync: document.getElementById('p1DeckSelect').value === MatchDecks.p1
+          && document.getElementById('p2DeckSelect').value === MatchDecks.p2,
+    stored: (store.get('matchDecks', {}) || {}).p2 === MatchDecks.p2
+  };
+});
+ok('プレイヤー1・2それぞれにランダムのボタンがある', rnd.both, JSON.stringify(rnd));
+ok('押すたびに自分のデッキから選び直される', rnd.uniq >= 3, JSON.stringify(rnd));
+ok('同じデッキが連続で選ばれない', rnd.same === 0, JSON.stringify(rnd));
+ok('40枚そろっていないデッキは選ばれない', rnd.half === false, JSON.stringify(rnd));
+ok('選び口と表示もそろって変わる', rnd.selSync, JSON.stringify(rnd));
+ok('選んだデッキが保存される', rnd.stored, JSON.stringify(rnd));
+
+const rndLay = await pg.evaluate(() => {
+  const bad = [];
+  document.querySelectorAll('#sc-setup button, #sc-setup select').forEach(n => {
+    const r = n.getBoundingClientRect();
+    if (r.width > 0 && (r.height < 36 || r.width < 36)) bad.push((n.id || n.className) + ':' + Math.round(r.width) + 'x' + Math.round(r.height));
+  });
+  return { bad, over: document.documentElement.scrollWidth > innerWidth };
+});
+ok('準備画面の押す部品はどれも36px以上ある', rndLay.bad.length === 0, rndLay.bad.join(' | '));
+ok('ランダムを足しても準備画面が横にはみ出さない', !rndLay.over, '');
+
 console.log(OUT.join('\n'));
 await b.close();

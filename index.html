@@ -948,6 +948,10 @@ select,input[type=text]{
   width:100%; font-family:var(--f-body); font-size:12.5px; padding:6px 8px; border-radius:2px;
   background:#1E160F; border:1px solid var(--edge2); color:var(--sand);
 }
+/* デッキの選び口＋「ランダム」。選び口を伸ばし、ボタンは字のぶんだけ */
+.deckpick{display:flex; align-items:center; gap:8px}
+.deckpick select{flex:1 1 auto; min-width:0}
+.deckpick .btn{flex:none; white-space:nowrap}
 .empty{padding:22px; text-align:center; color:var(--faint); font-family:var(--f-type); font-size:11px; letter-spacing:.1em}
 .acc{border:1px solid var(--edge); border-radius:var(--r); overflow:hidden; margin-top:8px}
 .acc details{border-bottom:1px solid #33261A; background:#201810}
@@ -1150,12 +1154,18 @@ select,input[type=text]{
       <div class="grid2" style="margin-top:14px">
         <div class="panel">
           <h3>プレイヤー1（PvEでは自分）のデッキ</h3>
-          <select id="p1DeckSelect"></select>
+          <div class="deckpick">
+            <select id="p1DeckSelect"></select>
+            <button class="btn sm" id="p1DeckRand" type="button" aria-label="プレイヤー1のデッキを自分のデッキからランダムに選ぶ">ランダム</button>
+          </div>
           <p class="note" id="p1DeckNote"></p>
         </div>
         <div class="panel">
           <h3>プレイヤー2（PvEでは相手AI）のデッキ</h3>
-          <select id="p2DeckSelect"></select>
+          <div class="deckpick">
+            <select id="p2DeckSelect"></select>
+            <button class="btn sm" id="p2DeckRand" type="button" aria-label="プレイヤー2のデッキを自分のデッキからランダムに選ぶ">ランダム</button>
+          </div>
           <p class="note" id="p2DeckNote"></p>
         </div>
       </div>
@@ -13219,7 +13229,7 @@ function fullRuleText() {
      Object.keys(ABILITY_TERMS).length + '語、特殊な仕組みが ' + Object.keys(MECHANIC_TERMS).length + '語。');
 
   head('2. 画面の構成');
-  li('BATTLE（決闘を始める／1人回し）… デッキと制限時間を選んで対戦を始める。1人回し・PvE・2PICKの3モードの入口。');
+  li('BATTLE（決闘を始める／1人回し）… デッキと制限時間を選んで対戦を始める。1人回し・PvE・2PICKの3モードの入口。デッキは「ランダム」で保存済みデッキから選ばせることもできる（40枚そろったデッキだけが選ばれ、同じデッキは続けて選ばれない）。');
   li('DECK（デッキ編成）… ' + RULES.deckSize + '枚のデッキを作る。ver・コスト・クラス・種類・レアリティ・タイプで絞り込み、カード名と説明文でも検索できる。1列表示とグリッド表示を切り替えられ、並び順は「ver→コスト」と「コスト→ver」から選べる。');
   li('COMMUNITY（みんなのデッキ）… 自分の保存済みデッキを投稿して他の人と共有し、他の人が投稿したデッキを自分の保存済みデッキに登録して使える。投稿は同じページを開いている人に見え、削除は投稿した本人（その端末）だけができる。');
   li('FORMAT（フォーマットデッキ一覧）… 完成済みのデッキを閲覧し、デッキ文をコピーしたり、自分の保存済みデッキに登録できる。');
@@ -13429,6 +13439,18 @@ if (!Decks || !Array.isArray(Decks) || !Decks.length) {
 function saveDecks() { store.set('decks', Decks); }
 function findDeck(id) { return Decks.find(d => d.id === id) || Decks[0]; }
 function deckTotal(d) { return Object.keys(d.list).reduce((a, k) => a + d.list[k], 0); }
+/* 自分の保存済みデッキから1つ選ぶ。40枚そろったデッキを優先し、
+   押すたびに変わるよう、今選んでいるデッキは候補から外す */
+function randomDeckId(exceptId) {
+  const ready = Decks.filter(deckValid);
+  let pool = ready.length ? ready : Decks.slice();
+  if (!pool.length) return null;
+  if (pool.length > 1 && exceptId) {
+    const other = pool.filter(d => d.id !== exceptId);
+    if (other.length) pool = other;
+  }
+  return pool[Math.floor(Math.random() * pool.length)].id;
+}
 function deckValid(d) {
   if (deckTotal(d) !== RULES.deckSize) return false;
   if (d.limit && Object.keys(d.list).some(id => d.list[id] > RULES.maxCopies)) return false;
@@ -15470,6 +15492,15 @@ function initEvents() {
   });
   $('#p1DeckSelect').addEventListener('change', e => { MatchDecks.p1 = e.target.value; store.set('matchDecks', MatchDecks); UI.renderSetup(); });
   $('#p2DeckSelect').addEventListener('change', e => { MatchDecks.p2 = e.target.value; store.set('matchDecks', MatchDecks); UI.renderSetup(); });
+  [['p1', 'プレイヤー1'], ['p2', 'プレイヤー2']].forEach(([k, label]) => {
+    $(`#${k}DeckRand`).addEventListener('click', () => {
+      const id = randomDeckId(MatchDecks[k]);
+      if (!id) { UI.toast('選べるデッキがない'); return; }
+      MatchDecks[k] = id; store.set('matchDecks', MatchDecks);
+      UI.renderSetup(); Sfx.play('card');
+      UI.toast(`${label}：${findDeck(id).name || '(無題のデッキ)'}`);
+    });
+  });
   $('#pveHandiList').addEventListener('click', e => {
     const b = e.target.closest('[data-handi-pick]'); if (!b) return;
     const id = b.dataset.handiPick, i = PveHandicaps.indexOf(id);
