@@ -144,9 +144,14 @@ const ok = (n, c, d = '') => OUT.push((c ? 'PASS ' : 'FAIL ') + n + (d ? ' :: ' 
   await pg.waitForTimeout(350);
   const pp = await pg.evaluate(() => { const t = [...document.querySelectorAll('.tbl')];
     return { n: t.length, cols: t.map(x => x.rows[0].cells.length),
+             turns: t.reduce((a, x) => a + x.rows[0].cells.length - 1, 0), expect: PP_FULL_TURN,
+             curve: ppCurveText(),
              over: t.filter(x => x.getBoundingClientRect().right > window.innerWidth + 1.5).length }; });
-  ok('PP表は2つに分かれ、細い画面からはみ出さない',
-     pp.n === 2 && pp.cols.every(c => c === 8) && pp.over === 0, JSON.stringify(pp));
+  /* 表はターン数から区切るので、列数はそのときの増え方しだい。
+     大事なのは「横にはみ出さない」「ターンが1つも欠けない」こと。 */
+  ok('PP表が細い画面からはみ出さない', pp.n >= 1 && pp.over === 0, JSON.stringify(pp));
+  ok('PP表にターンが1つも欠けていない', pp.turns === pp.expect, JSON.stringify(pp));
+  ok('PP表は1つあたり8列まで（細い画面に収まる幅）', pp.cols.every(c => c <= 8), JSON.stringify(pp));
   const bars = await pg.evaluate(() => ['rule', 'cards', 'deck'].map(s => { UI.go(s);
     const h = document.querySelector('#sc-' + s + ' .bar h2');
     return { s, h: Math.round(h.getBoundingClientRect().height), fs: Math.round(parseFloat(getComputedStyle(h).fontSize)) }; }));

@@ -80,6 +80,26 @@ ok('キーワード「エンハンス」が用語集にある', Bx.enhanceKw, ''
 ok('「山札で捨てられた時」が用語集にある', Bx.deckDiscarded, '');
 ok('バッジ2種が登録され説明も揃っている', Bx.rudeman && Bx.voidend && Bx.badgeDesc, JSON.stringify(Bx));
 
+/* ---------- [C] PPの増え方 ---------- */
+const PP = await pg.evaluate(() => {
+  const curve = []; for (let t = 1; t <= 18; t++) curve.push(maxPPFor(t));
+  return { curve, full: PP_FULL_TURN, text: ppCurveText(), cap: RULES.ppCap,
+           footer: (document.querySelector('#ppCurve') || {}).textContent || '',
+           keys: Object.keys(MAX_PP_BY_TURN).map(Number) };
+});
+ok('PPは 1-2-3-4-5-6-7-8-8-9-9-10 で増える',
+   PP.text === '1-2-3-4-5-6-7-8-8-9-9-10', PP.text);
+ok('ターン1は1PPから始まる', PP.curve[0] === 1, String(PP.curve[0]));
+ok('ターン12で上限10に届き、以降は10のまま',
+   PP.full === 12 && PP.curve.slice(11).every(v => v === 10), JSON.stringify(PP.curve));
+ok('PPが減る所がない（ずっと増えるか据え置き）',
+   PP.curve.every((v, i) => i === 0 || v >= PP.curve[i - 1]), JSON.stringify(PP.curve));
+ok('上限を超える値がない', PP.curve.every(v => v <= PP.cap), String(PP.cap));
+ok('ターンの指定に抜けがない（1からターン12まで連番）',
+   PP.keys.join(',') === Array.from({ length: PP.full }, (_, i) => i + 1).join(','), PP.keys.join(','));
+ok('ホーム下の表記が増え方と一致している',
+   PP.footer.indexOf(PP.text) >= 0, PP.footer);
+
 console.log(OUT.join('\n'));
 console.log('pageerrors: ' + errs.length + (errs.length ? ' :: ' + errs.slice(0,2).join(' | ') : ''));
 console.log('---- ' + OUT.filter(x => x.startsWith('PASS')).length + ' pass / ' + OUT.filter(x => x.startsWith('FAIL')).length + ' fail');

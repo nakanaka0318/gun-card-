@@ -1009,7 +1009,7 @@ select,input[type=text]{
       </nav>
     </div>
     <footer class="home-foot">
-      <span>縦・横どちらでも &middot; PP 2-3-4-5-6-6-7-7-8-8-9-9-10</span>
+      <span id="ppCurve">縦・横どちらでも</span>
       <button class="chip" id="muteHome" type="button"></button>
       <button class="chip" id="musicHome" type="button"></button>
     </footer>
@@ -10238,8 +10238,17 @@ const RULES = {
   superTurn:  { first: 7, second: 6 },
   extraPPRecharge: [1, 5, 9, 13]   // 後攻のエクストラPPが補充される自分のターン
 };
-const MAX_PP_BY_TURN = { 1: 2, 2: 3, 3: 4, 4: 5, 5: 6, 6: 6, 7: 7, 8: 7, 9: 8, 10: 8, 11: 9, 12: 9, 13: 10 };
-const maxPPFor = t => (t >= 14 ? 10 : (MAX_PP_BY_TURN[t] || 2));
+const MAX_PP_BY_TURN = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, 6: 6, 7: 7, 8: 8, 9: 8, 10: 9, 11: 9, 12: 10 };
+/* これ以降はずっと上限のまま。表や説明文の「◯+」もこの値から作るので、
+   増え方を変えたら MAX_PP_BY_TURN だけ直せば全部そろう。 */
+const PP_FULL_TURN = Math.max.apply(null, Object.keys(MAX_PP_BY_TURN).map(Number));
+const maxPPFor = t => (t >= PP_FULL_TURN ? MAX_PP_BY_TURN[PP_FULL_TURN] : (MAX_PP_BY_TURN[t] || 1));
+/* 「1-2-3-…」の並び。ホームの下に出す */
+const ppCurveText = () => {
+  const out = [];
+  for (let t = 1; t <= PP_FULL_TURN; t++) out.push(maxPPFor(t));
+  return out.join('-');
+};
 
 /* ------------------------------------------------------ [3] ゲームエンジン */
 let G = null, UID = 0;
@@ -12483,7 +12492,11 @@ function fullRuleText() {
   L.push('');
   {
     const ts = [], vs = [];
-    for (let t = 1; t <= 14; t++) { const lab = (t === 14 ? '14+' : String(t)); const v = String(maxPPFor(t)); const w = Math.max(lab.length, v.length); ts.push(lab.padStart(w)); vs.push(v.padStart(w)); }
+    for (let t = 1; t <= PP_FULL_TURN; t++) {
+      const lab = (t === PP_FULL_TURN ? t + '+' : String(t));
+      const v = String(maxPPFor(t)); const w = Math.max(lab.length, v.length);
+      ts.push(lab.padStart(w)); vs.push(v.padStart(w));
+    }
     L.push('  ターン ： ' + ts.join(' '));
     L.push('  最大PP ： ' + vs.join(' '));
   }
@@ -13618,11 +13631,17 @@ const UI = {
   renderRule() {
     const acc = $('#ruleAcc'); if (acc.dataset.built) return; acc.dataset.built = '1';
     const ppRows = [], ppVals = [];
-    for (let t = 1; t <= 14; t++) { ppRows.push(`<td>${t === 14 ? '14+' : t}</td>`); ppVals.push(`<td>${maxPPFor(t)}</td>`); }
-    /* 14ターン分を一列に並べると細い画面で横にはみ出すので、7ターンずつ2つの表に分ける */
-    const ppTables = [0, 7].map(i =>
-      `<table class="tbl"><tr><th>ターン</th>${ppRows.slice(i, i + 7).join('')}</tr>` +
-      `<tr><th>最大PP</th>${ppVals.slice(i, i + 7).join('')}</tr></table>`).join('');
+    for (let t = 1; t <= PP_FULL_TURN; t++) {
+      ppRows.push(`<td>${t === PP_FULL_TURN ? t + '+' : t}</td>`); ppVals.push(`<td>${maxPPFor(t)}</td>`);
+    }
+    /* 一列に並べると細い画面で横にはみ出すので、7ターンずつに区切って表を分ける。
+       区切りはターン数から作るので、増え方を変えても列が欠けない。 */
+    const PP_PER_TABLE = 7;
+    const ppTables = [];
+    for (let i = 0; i < ppRows.length; i += PP_PER_TABLE) {
+      ppTables.push(`<table class="tbl"><tr><th>ターン</th>${ppRows.slice(i, i + PP_PER_TABLE).join('')}</tr>` +
+        `<tr><th>最大PP</th>${ppVals.slice(i, i + PP_PER_TABLE).join('')}</tr></table>`);
+    }
     const kwList = Object.keys(KEYWORDS).map(k =>
       `<div class="term"><b>${KEYWORDS[k].name}<i>${KEYWORDS[k].glyph}</i></b><s>${KEYWORDS[k].desc}</s></div>`).join('');
     const termList = Object.keys(ABILITY_TERMS).map(k =>
@@ -13634,7 +13653,7 @@ const UI = {
       ['デッキ', `デッキは <b>${RULES.deckSize}枚</b>。同名カードは最大 <b>${RULES.maxCopies}枚</b> まで（テストデッキはこの制限を外せる）。トークンはデッキに入れられない。`],
       ['手札', `ゲーム開始時に <b>${RULES.initialHand}枚</b> ドローし、任意の枚数を引き直す（マリガン）。手札上限は <b>${RULES.handMax}枚</b>。上限を超えて引いたカードは墓場へ送られる。`],
       ['PP', `カードのプレイには PP を使う。自分のターン開始時、そのターンの最大PPまで回復する。最大PPの増え方はこのゲーム独自で、上限は <b>${RULES.ppCap}</b>。
-        ${ppTables}`],
+        ${ppTables.join('')}`],
       ['キーワード能力', kwList],
       ['能力の発動タイミング', termList],
       ['特殊な仕組み', mechList],
@@ -14906,6 +14925,7 @@ function boot() {
   ['pointerdown', 'keydown', 'touchstart'].forEach(ev =>
     window.addEventListener(ev, wake, { once: true, passive: true }));
   blockZoomAndSelect();
+  { const n = $('#ppCurve'); if (n) n.textContent = `縦・横どちらでも · PP ${ppCurveText()}`; }
   updateMuteLabel();
   UI.go('home');
   /* 公開ページの更新で状態を失わないように保存する */
