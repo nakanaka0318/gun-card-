@@ -123,22 +123,25 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
      opts.open && opts.hasLib && opts.hasName && opts.closed, JSON.stringify(opts));
   /* 「詳しく見る」に切り替えると、札を押して効果の文を読める */
   const detail = await pg.evaluate(async () => {
-    DeckViewMode = 'list'; UI.renderDeck();
-    await new Promise(r => setTimeout(r, 200));
+    document.querySelector('#deckViewBtn').click();        // 並べる⇄効果を読む
+    await new Promise(r => setTimeout(r, 250));
     const mini = document.querySelector('#deckList .entry .mini .card');
     const hasInc = !!mini.closest('[data-inc]');
     mini.click();
     await new Promise(r => setTimeout(r, 200));
     const open = !document.querySelector('#ovDetail').hidden;
     document.querySelector('#detailClose').click();
-    DeckViewMode = 'grid'; UI.renderDeck();
-    return { hasInc, open };
+    document.querySelector('#deckViewBtn').click();
+    await new Promise(r => setTimeout(r, 200));
+    return { hasInc, open, backToGrid: DeckViewMode === 'grid' };
   });
   ok('「効果を読む」では札を押すと詳しい説明も開く', detail.open && detail.hasInc === false, JSON.stringify(detail));
+  ok('表示の切り替えボタンで元に戻せる', detail.backToGrid === true, JSON.stringify(detail));
 
   /* 「効果を読む」は、札を足し引きしながら効果の全文が読める表示になっているか */
   const read = await pg.evaluate(async () => {
-    DeckViewMode = 'list'; UI.renderDeck();
+    document.querySelector('#deckViewBtn').click();
+    await new Promise(r => setTimeout(r, 200));
     await new Promise(r => setTimeout(r, 250));
     const rows = [...document.querySelectorAll('#deckList .entry')];
     const texts = rows.map(r => { const e = r.querySelector('.etext'); return e ? e.textContent.trim() : null; });
@@ -154,7 +157,8 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
       .every(r => r.querySelector('[data-dec]').disabled);
     const tiny = [...document.querySelectorAll('#deckList .stepper .btn')]
       .filter(n => { const b = n.getBoundingClientRect(); return b.height < 36 || b.width < 36; }).length;
-    DeckViewMode = 'grid'; UI.renderDeck();
+    document.querySelector('#deckViewBtn').click();
+    await new Promise(r => setTimeout(r, 200));
     return { rows: rows.length, withText: texts.filter(t => t && t.length > 0).length,
              sample: texts.find(t => t && t.indexOf('ラストワード') >= 0) || texts[1],
              hasStep, clipped, over, badges, zeroDisabled, tiny };
@@ -229,7 +233,8 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
     const h = document.querySelector('#deckList .ghint');
     return h ? h.textContent.trim() : null;
   });
-  ok('押し方の案内が候補の先頭に出ている', !!hint && hint.indexOf('1枚入る') >= 0, String(hint));
+  ok('押し方の案内が候補の先頭に出ている',
+     !!hint && hint.indexOf('1枚入る') >= 0 && hint.indexOf('効果の画面') >= 0, String(hint));
   ok('デッキ編成でページエラーなし', errs.length === 0, errs.join(' | '));
   await ctx.close();
 }

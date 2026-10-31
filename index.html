@@ -743,14 +743,56 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   background:#1F170F; border-left:2px solid var(--brass-d); border-radius:0 3px 3px 0; padding:5px 8px; margin-top:2px;
 }
 
+/* ---- デッキ編成：コストの分布（マナカーブ）。棒がそのままコストの絞り込みボタン ---- */
+.curve{display:flex; gap:3px; align-items:flex-end}
+.deckline{display:flex; align-items:baseline; gap:10px; min-width:0}
+.deckline .deckwho{flex:0 1 auto}
+.deckline .deckmix{margin-left:auto}
+.curve .cv{
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
+  padding:0; background:none; border:0; border-radius:3px;
+}
+.curve .cv .cn{font-family:var(--f-num); font-size:10px; line-height:1; color:var(--mute)}
+.curve .cv .cb{
+  width:100%; height:22px; display:flex; align-items:flex-end;
+  background:#1E160F; border:1px solid var(--edge); border-radius:2px; overflow:hidden;
+}
+.curve .cv .cb i{display:block; width:100%; background:linear-gradient(#F0C878,#8A5C18); min-height:0}
+.curve .cv .cl{
+  font-family:var(--f-num); font-size:10.5px; line-height:1.4; color:var(--faint);
+  width:100%; text-align:center; border-radius:2px;
+}
+.curve .cv[aria-pressed="true"] .cl{background:linear-gradient(#C08C33,#8A5C18); color:#26170A; font-weight:700}
+.curve .cv[aria-pressed="true"] .cb{border-color:var(--brass)}
+.curve .cv.empty .cb i{background:#3A2B1C}
+.deckmix{font-family:var(--f-type); font-size:9px; letter-spacing:.06em; color:var(--faint); white-space:nowrap}
+.deckmix b{color:var(--paper); font-weight:400}
+.deckfind{
+  flex:1 1 150px; min-width:0; font-family:var(--f-body); font-size:12.5px; padding:6px 10px;
+  background:#1A130B; border:1px solid var(--edge2); border-radius:2px; color:var(--sand);
+}
+.deckfind::placeholder{color:var(--faint)}
+/* デッキ確認：今の40枚をまとめて見る */
+.checkhead{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px}
+.checkhead .count{font-size:22px}
+.checkgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(66px,1fr)); gap:10px 6px; margin-top:10px}
+.checkgrid .ccell{position:relative; display:flex; flex-direction:column; align-items:center; gap:3px}
+.checkgrid .ccell .cn{
+  position:absolute; right:-3px; top:-4px; z-index:20; min-width:19px; height:19px; padding:0 4px;
+  border-radius:10px; display:grid; place-items:center;
+  font-family:var(--f-num); font-weight:600; font-size:12px; line-height:1;
+  background:linear-gradient(#C08C33,#8A5C18); border:1px solid #F0DCA6; color:#26170A;
+}
+.checkgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:8px}
+
 /* ---- デッキ編成：常に見えている操作帯 ---- */
 .deckfix{
-  flex:none; display:flex; flex-direction:column; gap:5px; padding:7px 14px 8px;
+  flex:none; display:flex; flex-direction:column; gap:4px; padding:6px 14px 6px;
   background:linear-gradient(#2A1F16,#1E150E); border-bottom:1px solid var(--edge);
 }
 .deckfix-row{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
 .deckfix-row.sub{gap:7px}
-.deckfix .count{font-size:22px}
+.deckfix .count{font-size:20px}
 .deckfix .deckbar{flex:1 1 90px; min-width:70px}
 .deckwho{
   font-family:var(--f-type); font-size:9.5px; letter-spacing:.1em; color:var(--faint);
@@ -809,9 +851,8 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .deckgrid .gstep .n{font-family:var(--f-num); font-size:13px; min-width:1.5em; text-align:center; color:var(--brass-l); flex:none}
 .deckgrid .gcell:not(.has) .gstep .n{color:var(--faint)}
 .deckgrid .ghint{
-  grid-column:1/-1; font-size:11px; line-height:1.7; color:var(--mute); white-space:pre-line;
-  background:#201810; border:1px solid var(--edge); border-left:2px solid var(--brass-d);
-  border-radius:0 3px 3px 0; padding:6px 10px; margin-bottom:2px;
+  grid-column:1/-1; font-size:10.5px; line-height:1.5; color:var(--mute);
+  border-left:2px solid var(--brass-d); padding:2px 0 2px 8px; margin-bottom:0;
 }
 .deckgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:8px; margin-top:2px}
 .entry{display:flex; align-items:flex-start; gap:10px; padding:8px 9px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
@@ -1123,12 +1164,19 @@ select,input[type=text]{
       <div class="deckfix-row">
         <span class="count tnum" id="deckCount">0<s>/40</s></span>
         <div class="deckbar"><i id="deckBar" style="width:0%"></i></div>
-        <button class="chip" id="deckOnlyIn" type="button" aria-pressed="false">デッキの中だけ</button>
+        <button class="chip" id="deckCheck" type="button">デッキ確認</button>
         <button class="chip" id="deckOptsBtn" type="button" aria-pressed="false">設定</button>
       </div>
+      <!-- コストの分布。棒を押すとそのコストだけに絞れる -->
+      <div class="curve" id="deckCurve"></div>
       <div class="deckfix-row sub">
+        <input type="search" id="deckFind" class="deckfind" placeholder="カード名・効果で探す" autocomplete="off">
+        <button class="chip" id="deckOnlyIn" type="button" aria-pressed="false">中だけ</button>
+        <button class="chip" id="deckViewBtn" type="button"></button>
+      </div>
+      <div class="deckline">
         <span class="deckwho" id="deckWho"></span>
-        <div class="opt" id="deckViewMode"></div>
+        <span class="deckmix" id="deckMix"></span>
       </div>
     </div>
     <div class="scroll">
@@ -1153,7 +1201,8 @@ select,input[type=text]{
           <div><label for="deckVer">VER（候補一覧の絞り込み）</label><select id="deckVer"></select></div>
           <div><label for="deckTextQ">説明文（効果の言葉）</label><input type="text" id="deckTextQ" placeholder="例：ファンファーレ"></div>
         </div>
-        <label class="hint" style="display:block; margin:10px 0 4px">候補一覧の並び順</label>
+        <div class="opt" id="deckViewMode" hidden></div>
+      <label class="hint" style="display:block; margin:10px 0 4px">候補一覧の並び順</label>
         <div class="opt" id="deckSortMode"></div>
         <p class="note" id="deckMsg"></p>
 
@@ -1342,6 +1391,21 @@ select,input[type=text]{
 </div></div>
 
 <div class="ov" id="ovResult" hidden><div class="ov-box result" id="resultBody"></div></div>
+
+<div class="ov" id="ovCheck" hidden><div class="ov-box" style="width:min(680px,96vw)">
+  <h3 id="checkTitle">デッキ確認</h3>
+  <div class="sub" id="checkSub">DECK CHECK</div>
+  <div class="checkhead">
+    <span class="count tnum" id="checkCount">0<s>/40</s></span>
+    <span class="deckmix" id="checkMix"></span>
+  </div>
+  <div class="curve" id="checkCurve"></div>
+  <div class="checkgrid" id="checkGrid"></div>
+  <div class="ov-row">
+    <button class="btn" id="checkClose">閉じる</button>
+    <button class="btn pri" id="checkCopy">デッキ文をコピー</button>
+  </div>
+</div></div>
 
 <div class="ov" id="ovText" hidden><div class="ov-box" style="width:min(560px,94vw)">
   <h3 id="textTitle">デッキ文</h3>
@@ -13480,6 +13544,7 @@ let FormatVerFilter = '';                                 // フォーマット�
 let showNeutralPool = store.get('showNeutralPool', true);   // 候補一覧にエニグマ（ニュートラル）を表示するか。表示/非表示はデッキの中身に影響しない
 let DeckViewMode = store.get('deckViewMode', 'grid');      // 候補一覧の表示：'grid'（横5枚）／'list'（横1枚ずつ）
 let DeckOnlyIn = false;                                    // デッキに入っている札だけを出すか（画面を開くたび解除）
+let DeckCostFilter = [];                                   // コストで絞り込む（空なら全部）。画面を開くたび解除
 let DeckSortMode = store.get('deckSortMode', 'ver');       // 候補一覧の並び順：'ver'（ver優先）／'cost'（コスト優先）
 const DECK_VIEWS = [['grid', '並べる'], ['list', '効果を読む']];
 const DECK_SORTS = [['ver', 'ver → コスト'], ['cost', 'コスト → ver']];
@@ -13500,7 +13565,44 @@ const groupLabelFor = (c, mode) => mode === 'cost' ? `COST ${c.cost}` : verLabel
 function cardTextMatches(c, q) {
   if (!q) return true;
   const kw = (c.keywords || []).map(k => KEYWORDS[k] ? KEYWORDS[k].name : '').join(' ');
-  return ((c.text || '') + ' ' + kw).indexOf(q) >= 0;
+  /* 名前・効果の文・キーワード・タイプ・クラスのどれかに当たれば出す */
+  const hay = [c.name, c.text || '', kw, TYPES[c.type] ? TYPES[c.type].name : '',
+               CLASSES[c.cls] ? CLASSES[c.cls].name : '', RARITIES[c.rarity] ? RARITIES[c.rarity].name : '',
+               verLabel(c.ver || 1)].join(' ');
+  return hay.indexOf(q) >= 0;
+}
+/* コストの並び（8は「8以上」をまとめる）。分布の棒と絞り込みで共用する */
+const COST_SLOTS = [1, 2, 3, 4, 5, 6, 7, 8];
+const costSlotOf = c => Math.min(8, Math.max(1, c.cost));
+/* デッキの中身を、コストごとの枚数と種別ごとの枚数にまとめる */
+function deckShape(d) {
+  const curve = {}, kinds = { follower: 0, spell: 0, amulet: 0 };
+  COST_SLOTS.forEach(k => { curve[k] = 0; });
+  Object.keys(d.list).forEach(id => {
+    const c = CARD_BY_ID[id]; if (!c) return;
+    const n = d.list[id];
+    curve[costSlotOf(c)] += n;
+    if (kinds[c.type] != null) kinds[c.type] += n;
+  });
+  return { curve, kinds, max: Math.max(1, ...COST_SLOTS.map(k => curve[k])) };
+}
+function deckMixText(sh) {
+  return `フォロワー<b>${sh.kinds.follower}</b>　スペル<b>${sh.kinds.spell}</b>　アミュレット<b>${sh.kinds.amulet}</b>`;
+}
+/* 分布の棒を組む。pressed に渡したコストは押された見た目にする */
+function curveHTML(sh, pressed, asButton) {
+  return COST_SLOTS.map(k => {
+    const n = sh.curve[k], h = Math.round(n / sh.max * 100);
+    const label = k === 8 ? '8+' : String(k);
+    const on = pressed && pressed.indexOf(k) >= 0;
+    const inner = `<span class="cn tnum">${n}</span>` +
+      `<span class="cb"><i style="height:${n ? Math.max(8, h) : 0}%"></i></span>` +
+      `<span class="cl tnum">${label}</span>`;
+    return asButton
+      ? `<button class="cv${n ? '' : ' empty'}" type="button" data-cost="${k}" aria-pressed="${!!on}"
+           aria-label="コスト${label}のカードだけにする（今${n}枚）">${inner}</button>`
+      : `<div class="cv${n ? '' : ' empty'}">${inner}</div>`;
+  }).join('');
 }
 let DeckEditId = Decks[0].id;                              // デッキ編成画面で今編集中のデッキ
 let MatchDecks = store.get('matchDecks', null);             // バトル開始画面でのプレイヤー別デッキ選択
@@ -13521,7 +13623,12 @@ const UI = {
     if (name === 'setup') this.renderSetup();
     if (name === 'twopick') this.renderTwoPick();
     if (name === 'pickrun') this.renderPickRun();
-    if (name === 'deck') { DeckOnlyIn = false; const o = $('#deckOpts'); if (o) o.hidden = true; this.renderDeck(); }
+    if (name === 'deck') {
+      DeckOnlyIn = false; DeckCostFilter = [];
+      const o = $('#deckOpts'); if (o) o.hidden = true;
+      const f = $('#deckFind'); if (f) f.value = '';
+      this.renderDeck();
+    }
     if (name === 'community') { communitySubscribe(); this.renderCommunity(); }
     if (name === 'format') this.renderFormat();
     if (name === 'matchup') this.renderMatchup();
@@ -13842,6 +13949,9 @@ const UI = {
     $('#deckWho').innerHTML = `<b>${esc(d.name) || '(無題のデッキ)'}</b> &middot; ${CLASSES[d.cls].kana}`;
     $('#deckOnlyIn').setAttribute('aria-pressed', String(DeckOnlyIn));
     $('#deckOptsBtn').setAttribute('aria-pressed', String(!$('#deckOpts').hidden));
+    const shape = deckShape(d);
+    $('#deckCurve').innerHTML = curveHTML(shape, DeckCostFilter, true);
+    $('#deckMix').innerHTML = deckMixText(shape);
     $('#deckCount').innerHTML = `${total}<s>/${RULES.deckSize}</s>`;
     $('#deckBar').style.width = Math.min(100, total / RULES.deckSize * 100) + '%';
     $('#deckLimit').checked = !!d.limit;
@@ -13884,11 +13994,21 @@ const UI = {
       });
     };
     chips($('#deckViewMode'), DECK_VIEWS, DeckViewMode, 'deckView');
+    {                                                      // 1つのボタンで並べる⇄効果を読むを行き来する
+      const cur = DECK_VIEWS.find(v => v[0] === DeckViewMode) || DECK_VIEWS[0];
+      const nxt = DECK_VIEWS.find(v => v[0] !== DeckViewMode) || DECK_VIEWS[0];
+      const btn = $('#deckViewBtn');
+      btn.textContent = cur[1];
+      btn.setAttribute('aria-pressed', 'true');
+      btn.setAttribute('aria-label', `表示：${cur[1]}（押すと${nxt[1]}に変わる）`);
+      btn.dataset.next = nxt[0];
+    }
     chips($('#deckSortMode'), DECK_SORTS, DeckSortMode, 'deckSort');
 
-    const tq = $('#deckTextQ').value.trim();
+    const tq = ($('#deckFind').value || '').trim() || $('#deckTextQ').value.trim();
     const pool = CARDS.filter(c => !c.token && (!verF || c.ver === +verF) &&
       (c.cls === d.cls || (c.cls === 'neutral' && showNeutralPool)) && cardTextMatches(c, tq) &&
+      (!DeckCostFilter.length || DeckCostFilter.indexOf(costSlotOf(c)) >= 0) &&
       (!DeckOnlyIn || (d.list[c.id] || 0) > 0));
     pool.sort(deckPoolSort);
     const list = $('#deckList');
@@ -13898,14 +14018,14 @@ const UI = {
       list.className = 'list';
       list.appendChild(el('p', 'empty',
         DeckOnlyIn ? 'このデッキにはまだ1枚も入っていない。「デッキの中だけ」を解除すると候補が出る。'
-                   : (tq ? `説明文に「${esc(tq)}」を含む候補がない。` : '候補がない。')));
+          : DeckCostFilter.length ? `コスト${DeckCostFilter.join('・')}に当てはまる候補がない。`
+          : (tq ? `「${esc(tq)}」に当てはまる候補がない。` : '候補がない。')));
       return;
     }
     if (DeckViewMode === 'grid') {
       /* グリッド表示：横に5枚並べて下に続く。並び順の先頭のまとまりごとに見出しを入れる */
       list.appendChild(el('div', 'ghint',
-        '札を短く押すと1枚入る。長く押すと効果の画面が開く。\n' +
-        '効果の文を読みながら足し引きしたいときは「効果を読む」に切り替える。'));
+        '短く押す＝1枚入る　／　長く押す＝効果の画面'));
       let lastGroup = null;
       pool.forEach(c => {
         const group = groupLabelFor(c, DeckSortMode);
@@ -13952,6 +14072,34 @@ const UI = {
       row.appendChild(st);
       list.appendChild(row);
     });
+  },
+
+  /* デッキ確認：今デッキに入っている札だけを、コストの小さい順にまとめて見る */
+  showDeckCheck() {
+    const d = findDeck(DeckEditId);
+    const sh = deckShape(d);
+    const total = deckTotal(d);
+    $('#checkTitle').textContent = d.name || '(無題のデッキ)';
+    $('#checkSub').textContent = `${CLASSES[d.cls].kana} ・ DECK CHECK`;
+    $('#checkCount').innerHTML = `${total}<s>/${RULES.deckSize}</s>`;
+    $('#checkMix').innerHTML = deckMixText(sh);
+    $('#checkCurve').innerHTML = curveHTML(sh, [], false);
+    const grid = $('#checkGrid'); grid.innerHTML = '';
+    const ids = Object.keys(d.list).sort((a, b) => {
+      const x = CARD_BY_ID[a], y = CARD_BY_ID[b];
+      return (x.cost - y.cost) || (x.ver || 1) - (y.ver || 1) || x.name.localeCompare(y.name, 'ja');
+    });
+    if (!ids.length) { grid.appendChild(el('p', 'empty', 'まだ1枚も入っていない。')); }
+    let lastCost = null;
+    ids.forEach(id => {
+      const c = CARD_BY_ID[id];
+      if (c.cost !== lastCost) { lastCost = c.cost; grid.appendChild(el('div', 'glabel', 'コスト ' + c.cost)); }
+      const cell = el('div', 'ccell');
+      cell.appendChild(this.staticCard(id));
+      cell.appendChild(el('span', 'cn tnum', String(d.list[id])));
+      grid.appendChild(cell);
+    });
+    $('#ovCheck').hidden = false;
   },
 
   /* グリッド表示のカード幅を、実際の横幅から5枚分に割り出す（--cw は長さでなければ高さが計算できない） */
@@ -15066,6 +15214,35 @@ function initEvents() {
     $('#deckOptsBtn').setAttribute('aria-pressed', String(!box.hidden));
     if (!box.hidden) box.scrollIntoView({ block: 'start', behavior: 'smooth' });
     Sfx.play('click');
+  });
+  /* コストの棒を押すと、そのコストだけに絞る（もう一度押すと戻る。複数選べる） */
+  $('#deckCurve').addEventListener('click', e => {
+    const b = e.target.closest('[data-cost]'); if (!b) return;
+    const k = +b.dataset.cost, i = DeckCostFilter.indexOf(k);
+    if (i >= 0) DeckCostFilter.splice(i, 1); else DeckCostFilter.push(k);
+    DeckCostFilter.sort((x, y) => x - y);
+    UI.renderDeck();
+    const sc = $('#sc-deck .scroll'); if (sc) sc.scrollTop = 0;
+    Sfx.play('click');
+  });
+  /* 探す：打つたびに候補をしぼる */
+  $('#deckFind').addEventListener('input', () => {
+    UI.renderDeck();
+    const sc = $('#sc-deck .scroll'); if (sc) sc.scrollTop = 0;
+  });
+  /* デッキ確認 */
+  $('#deckCheck').addEventListener('click', () => { Sfx.play('click'); UI.showDeckCheck(); });
+  $('#deckViewBtn').addEventListener('click', e => {
+    DeckViewMode = e.currentTarget.dataset.next;
+    store.set('deckViewMode', DeckViewMode);
+    UI.renderDeck();
+    const sc = $('#sc-deck .scroll'); if (sc) sc.scrollTop = 0;
+    Sfx.play('click');
+  });
+  $('#checkClose').addEventListener('click', () => { $('#ovCheck').hidden = true; });
+  $('#checkCopy').addEventListener('click', () => {
+    $('#ovCheck').hidden = true;
+    UI.showText('デッキ文', deckText(findDeck(DeckEditId)));
   });
   $('#deckOnlyIn').addEventListener('click', () => {
     DeckOnlyIn = !DeckOnlyIn;
