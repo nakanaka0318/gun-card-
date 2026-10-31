@@ -69,24 +69,28 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
     return { before, mid, after: deckTotal(findDeck(DeckEditId)), n1, hadDec, id };
   });
   ok('札そのものを押すと1枚入る', add.mid === add.before + 1 && add.n1 === 1, JSON.stringify(add));
-  ok('入っている札にだけ「− 1枚」が出る', add.hadDec === true, JSON.stringify(add));
-  ok('「− 1枚」で元に戻る', add.after === add.before, JSON.stringify(add));
+  ok('入っている札にだけ減らすボタンが出る', add.hadDec === true, JSON.stringify(add));
+  ok('右上の数字を押すと元に戻る', add.after === add.before, JSON.stringify(add));
 
   /* 入っていない札には減らすボタンを出さない（並びを軽くするため） */
   const lean = await pg.evaluate(() => {
     const cells = [...document.querySelectorAll('#deckList .gcell')];
-    const emptyWithStep = cells.filter(c => !c.classList.contains('has') && c.querySelector('.gstep')).length;
-    const hasWithStep = cells.filter(c => c.classList.contains('has') && c.querySelector('.gstep')).length;
+    const emptyWithStep = cells.filter(c => !c.classList.contains('has') && c.querySelector('.gminus')).length;
+    const hasWithStep = cells.filter(c => c.classList.contains('has') && c.querySelector('.gminus')).length;
     const hasCount = cells.filter(c => c.classList.contains('has')).length;
-    return { emptyWithStep, hasWithStep, hasCount };
+    /* 減らすボタンは札の下に段を作らないので、どの札も同じ高さで並ぶ */
+    const hs = cells.filter(c => c.classList.contains('has')).map(c => Math.round(c.getBoundingClientRect().height));
+    const es = cells.filter(c => !c.classList.contains('has')).map(c => Math.round(c.getBoundingClientRect().height));
+    return { emptyWithStep, hasWithStep, hasCount, sameH: hs.length && es.length ? hs[0] === es[0] : null };
   });
   ok('0枚の札には増減ボタンを出さない', lean.emptyWithStep === 0, JSON.stringify(lean));
   ok('入っている札には必ず増減ボタンが出る', lean.hasWithStep === lean.hasCount, JSON.stringify(lean));
+  ok('入っている札も入っていない札も同じ高さで並ぶ', lean.sameH === true, JSON.stringify(lean));
 
   /* 枚数の印が札の外枠に隠れていないか */
   const badge = await pg.evaluate(() => {
     const gn = document.querySelector('.gcell.has .gn'); if (!gn) return null;
-    const card = gn.closest('.gcard').querySelector('.card');
+    const card = gn.closest('.gcell').querySelector('.card');
     const frame = card.querySelector('.c-frame');
     return { z: +getComputedStyle(gn).zIndex, frameZ: +getComputedStyle(frame).zIndex,
              w: Math.round(gn.getBoundingClientRect().width), text: gn.textContent };
@@ -234,7 +238,8 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
     return h ? h.textContent.trim() : null;
   });
   ok('押し方の案内が候補の先頭に出ている',
-     !!hint && hint.indexOf('1枚入る') >= 0 && hint.indexOf('効果の画面') >= 0, String(hint));
+     !!hint && hint.indexOf('1枚入る') >= 0 && hint.indexOf('1枚減る') >= 0 && hint.indexOf('長押し') >= 0,
+     String(hint));
   ok('デッキ編成でページエラーなし', errs.length === 0, errs.join(' | '));
   await ctx.close();
 }

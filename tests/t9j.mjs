@@ -31,16 +31,21 @@ const cv = await pg.evaluate(() => {
   return { n: bars.length, shown, want, labels, sum: shown.reduce((a, x) => a + x, 0), total: deckTotal(d),
     tiny: bars.filter(x => { const r = x.getBoundingClientRect(); return r.height < 36 || r.width < 30; }).length,
     over: bars.filter(x => x.getBoundingClientRect().right > innerWidth + 1.5).length,
-    mix: document.querySelector('#deckMix').textContent,
     kinds: sh.kinds };
 });
 ok('コストの分布が8本ある（8以上はまとめる）', cv.n === 8 && cv.labels.join(',') === '1,2,3,4,5,6,7,8+', cv.labels.join(','));
 ok('分布の数字がデッキの中身と合っている', cv.shown.join(',') === cv.want.join(','), JSON.stringify(cv));
 ok('分布の合計がデッキの枚数と合う', cv.sum === cv.total, `${cv.sum}/${cv.total}`);
 ok('分布の棒は指で押せる大きさで、横にはみ出さない', cv.tiny === 0 && cv.over === 0, JSON.stringify({ tiny: cv.tiny, over: cv.over }));
-ok('フォロワー・スペル・アミュレットの内訳が出る',
-   cv.mix.indexOf('フォロワー' + cv.kinds.follower) >= 0 && cv.mix.indexOf('スペル' + cv.kinds.spell) >= 0,
-   cv.mix);
+/* 内訳は「デッキ確認」の中にまとめた（操作帯を1段ぶん減らすため） */
+const mx = await pg.evaluate(() => {
+  document.querySelector('#deckCheck').click();
+  const t = document.querySelector('#checkMix').textContent;
+  document.querySelector('#checkClose').click();
+  return t;
+});
+ok('フォロワー・スペル・アミュレットの内訳がデッキ確認に出る',
+   mx.indexOf('フォロワー' + cv.kinds.follower) >= 0 && mx.indexOf('スペル' + cv.kinds.spell) >= 0, mx);
 
 /* ---------- 棒を押してコストで絞る ---------- */
 const f1 = await pg.evaluate(async () => {
@@ -133,7 +138,6 @@ const chk = await pg.evaluate(async () => {
     sum: counts.reduce((a, x) => a + x, 0), total: deckTotal(d),
     curve, want: COST_SLOTS.map(k => sh.curve[k]),
     sorted: costs.every((v, i) => i === 0 || v >= costs[i - 1]),
-    labels: [...document.querySelectorAll('#checkGrid .glabel')].map(x => x.textContent),
     over: [...document.querySelectorAll('#ovCheck *')].filter(n => { const r = n.getBoundingClientRect();
       return r.width && (r.right > innerWidth + 1.5 || r.left < -1.5); }).length,
     title: document.querySelector('#checkTitle').textContent };
@@ -142,8 +146,8 @@ ok('デッキ確認が開く', chk.open, '');
 ok('デッキの全種類が並ぶ', chk.kinds === chk.deckKinds && chk.kinds > 5, JSON.stringify({ kinds: chk.kinds, deckKinds: chk.deckKinds }));
 ok('枚数の合計がデッキの枚数と合う', chk.sum === chk.total, `${chk.sum}/${chk.total}`);
 ok('デッキ確認にもコストの分布が出る', chk.curve.join() === chk.want.join(), JSON.stringify(chk.curve));
-ok('コストの小さい順に並び、コストごとの見出しが付く',
-   chk.sorted && chk.labels.length > 2 && chk.labels[0].indexOf('コスト') >= 0, JSON.stringify(chk.labels));
+ok('コストの小さい順に、見出しで割らずに詰めて並ぶ',
+   chk.sorted && chk.kinds === chk.deckKinds, JSON.stringify({ sorted: chk.sorted, kinds: chk.kinds, deckKinds: chk.deckKinds }));
 ok('デッキ確認が横にはみ出さない', chk.over === 0, String(chk.over));
 ok('デッキ名が見出しに出る', chk.title.indexOf('購入ドミニオン') >= 0, chk.title);
 
@@ -168,13 +172,15 @@ ok('空のデッキでも壊れず、0枚と出る',
 /* ---------- 操作帯の高さ（札が見える余地） ---------- */
 const sz = await pg.evaluate(() => {
   const fix = document.querySelector('.deckfix').getBoundingClientRect();
-  const cards = [...document.querySelectorAll('#deckList .card')];
-  const vis = cards.filter(c => { const r = c.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
-  return { fixH: Math.round(fix.height), H: innerHeight, visible: vis.length,
-           pct: Math.round(fix.height / innerHeight * 100) };
+  const bar = document.querySelector('#sc-deck .bar').getBoundingClientRect();
+  const h = bar.height + fix.height;
+  const cells = [...document.querySelectorAll('#deckList .gcell')];
+  const vis = cells.filter(c => { const r = c.getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight; });
+  return { fixH: Math.round(h), H: innerHeight, visible: vis.length,
+           pct: Math.round(h / innerHeight * 100) };
 });
-ok('操作帯が画面の1/4に収まる', sz.pct <= 25, JSON.stringify(sz));
-ok('開いた時点で札が10枚以上見えている', sz.visible >= 10, JSON.stringify(sz));
+ok('見出しと操作帯を合わせても画面の1/5に収まる', sz.pct <= 20, JSON.stringify(sz));
+ok('開いた時点で札が25枚以上見えている', sz.visible >= 25, JSON.stringify(sz));
 ok('デッキ編成でページエラーなし', errs.length === 0, errs.join(' | '));
 
 console.log(OUT.join('\n'));

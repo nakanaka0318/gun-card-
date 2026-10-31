@@ -75,6 +75,7 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .screen{flex:1; min-height:0; display:flex; flex-direction:column}
 .screen[hidden]{display:none!important}
 .scroll{overflow-y:auto; overflow-x:hidden; flex:1; min-height:0; touch-action:pan-y; padding-block:14px 26px; padding-left:16px; padding-right:16px}
+#sc-deck .scroll{padding-block:8px 24px; padding-left:12px; padding-right:12px}
 
 /* 木製看板／真鍮プレート */
 .sign{
@@ -144,6 +145,20 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 }
 /* 細い画面では飾りの英字をやめ、日本語の見出しに幅を譲る */
 @media (max-width:400px){ .bar .tag{display:none} }
+/* デッキ編成の帯：デッキ名・枚数・設定を1段に収めた薄い見出し */
+.bar.slim{padding:4px 11px; gap:7px}
+.bar.slim .btn.sm{min-height:36px; min-width:38px; padding-inline:10px}
+@media (max-width:400px){ .bar .lbl{display:none} }
+.countbtn{
+  flex:none; display:inline-flex; align-items:center; min-height:36px; padding:2px 9px;
+  background:#1A130B; border:1px solid var(--edge2); border-radius:3px;
+}
+.countbtn:hover{border-color:var(--brass-d)}
+.countbtn .count{font-size:19px}
+.countbtn.full{border-color:var(--brass); background:#2A2016}
+.deckprog{flex:none; height:3px; background:#160F09; overflow:hidden}
+.deckprog i{display:block; height:100%; background:linear-gradient(90deg,#8A5C18,#F0C878)}
+.deckprog.full i{background:linear-gradient(90deg,#C08C33,#F0DCA6)}
 
 .panel{background:linear-gradient(#261C14,#1E160F); border:1px solid var(--edge); border-radius:var(--r); padding:12px 14px}
 .panel h3{margin:0 0 8px; font-family:var(--f-type); font-size:11px; letter-spacing:.16em; color:var(--brass); font-weight:400}
@@ -202,6 +217,8 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   border:1px solid var(--edge2); background:#221A12; color:var(--mute);
 }
 .chip[aria-pressed="true"]{background:linear-gradient(#C08C33,#8A5C18); color:#24160A; border-color:#E9C47C; font-weight:700}
+/* 表示の切り替えは「絞り込みが効いている」印ではないので、金色で目立たせない */
+#deckViewBtn[aria-pressed="true"]{background:#2A2016; color:var(--brass-l); border-color:var(--brass-d); font-weight:400}
 .chip .cdot{display:inline-block; width:7px; height:7px; border-radius:50%; background:var(--c,var(--brass)); margin-right:5px; vertical-align:1px}
 .chip[disabled]{opacity:.4; pointer-events:none}
 
@@ -745,21 +762,18 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 
 /* ---- デッキ編成：コストの分布（マナカーブ）。棒がそのままコストの絞り込みボタン ---- */
 .curve{display:flex; gap:3px; align-items:flex-end}
-.deckline{display:flex; align-items:baseline; gap:10px; min-width:0}
-.deckline .deckwho{flex:0 1 auto}
-.deckline .deckmix{margin-left:auto}
 .curve .cv{
-  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:2px;
-  padding:0; background:none; border:0; border-radius:3px;
+  flex:1; min-width:0; display:flex; flex-direction:column; align-items:center; gap:1px;
+  min-height:38px; padding:0; background:none; border:0; border-radius:3px;
 }
-.curve .cv .cn{font-family:var(--f-num); font-size:10px; line-height:1; color:var(--mute)}
+.curve .cv .cn{font-family:var(--f-num); font-size:9px; line-height:1; color:var(--mute)}
 .curve .cv .cb{
-  width:100%; height:22px; display:flex; align-items:flex-end;
+  width:100%; height:16px; display:flex; align-items:flex-end;
   background:#1E160F; border:1px solid var(--edge); border-radius:2px; overflow:hidden;
 }
 .curve .cv .cb i{display:block; width:100%; background:linear-gradient(#F0C878,#8A5C18); min-height:0}
 .curve .cv .cl{
-  font-family:var(--f-num); font-size:10.5px; line-height:1.4; color:var(--faint);
+  font-family:var(--f-num); font-size:10.5px; line-height:1.25; color:var(--faint);
   width:100%; text-align:center; border-radius:2px;
 }
 .curve .cv[aria-pressed="true"] .cl{background:linear-gradient(#C08C33,#8A5C18); color:#26170A; font-weight:700}
@@ -768,14 +782,14 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .deckmix{font-family:var(--f-type); font-size:9px; letter-spacing:.06em; color:var(--faint); white-space:nowrap}
 .deckmix b{color:var(--paper); font-weight:400}
 .deckfind{
-  flex:1 1 150px; min-width:0; font-family:var(--f-body); font-size:12.5px; padding:6px 10px;
+  flex:1 1 150px; min-width:0; min-height:36px; font-family:var(--f-body); font-size:12.5px; padding:6px 10px;
   background:#1A130B; border:1px solid var(--edge2); border-radius:2px; color:var(--sand);
 }
 .deckfind::placeholder{color:var(--faint)}
 /* デッキ確認：今の40枚をまとめて見る */
-.checkhead{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:8px}
+.checkhead{display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:6px}
 .checkhead .count{font-size:22px}
-.checkgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(66px,1fr)); gap:10px 6px; margin-top:10px}
+.checkgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(58px,1fr)); gap:7px 5px; margin-top:8px}
 .checkgrid .ccell{position:relative; display:flex; flex-direction:column; align-items:center; gap:3px}
 .checkgrid .ccell .cn{
   position:absolute; right:-3px; top:-4px; z-index:20; min-width:19px; height:19px; padding:0 4px;
@@ -787,19 +801,34 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 
 /* ---- デッキ編成：常に見えている操作帯 ---- */
 .deckfix{
-  flex:none; display:flex; flex-direction:column; gap:4px; padding:6px 14px 6px;
-  background:linear-gradient(#2A1F16,#1E150E); border-bottom:1px solid var(--edge);
+  flex:none; display:flex; flex-direction:column; gap:4px; padding:5px 12px 6px;
+  background:#231A12; border-bottom:1px solid var(--edge);
 }
 .deckfix-row{display:flex; align-items:center; gap:9px; flex-wrap:wrap}
 .deckfix-row.sub{gap:7px}
-.deckfix .count{font-size:20px}
-.deckfix .deckbar{flex:1 1 90px; min-width:70px}
-.deckwho{
-  font-family:var(--f-type); font-size:9.5px; letter-spacing:.1em; color:var(--faint);
-  white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:52%;
-}
-.deckwho b{color:var(--brass-l); font-weight:400}
 .deckfix .opt{margin-left:auto}
+/* 横画面は高さが足りないので、分布と探す欄を横に並べて1段に収める */
+@media (orientation:landscape) and (max-height:540px){
+  .bar.slim{padding:3px 11px}
+  .deckfix{flex-direction:row; align-items:center; gap:10px; padding:4px 12px}
+  .deckfix .curve{flex:1 1 auto; min-width:200px}
+  .deckfix-row.sub{flex:0 1 330px; min-width:220px}
+  .deckfix .curve .cv{min-height:34px}
+  .deckfix .curve .cv .cb{height:13px}
+}
+/* 見出しの帯に出す「デッキ名／クラス」。横幅が足りなければ名前から詰める */
+.deckwho{
+  flex:1 1 auto; min-width:0; display:flex; flex-direction:column; justify-content:center; gap:0;
+  overflow:hidden;
+}
+.deckwho b{
+  font-family:var(--f-display); font-weight:400; font-size:15px; line-height:1.25; color:var(--brass-l);
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
+.deckwho s{
+  text-decoration:none; font-family:var(--f-type); font-size:9px; letter-spacing:.1em; line-height:1.3;
+  color:var(--faint); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+}
 
 /* ================= デッキ／カード一覧／ルール ================= */
 .deckhead{display:flex; align-items:center; gap:12px; flex-wrap:wrap}
@@ -826,36 +855,46 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .deckname-input:focus-visible{outline:2px solid var(--brass-l); outline-offset:1px}
 .btn.sm.confirm{background:linear-gradient(#8A3220,#5A1E12); border-color:#C0532C; color:#FFD9C0}
 /* デッキ編成の候補一覧：グリッド表示（横5枚ずつ並べて下に続く） */
-.deckgrid{--cw:62px; --gap:5px; display:grid; grid-template-columns:repeat(5, var(--cw)); justify-content:space-between; gap:9px var(--gap); margin-top:10px}
+.deckgrid{--cw:62px; --gap:5px; --cols:5; display:grid; grid-template-columns:repeat(var(--cols), var(--cw)); justify-content:space-between; gap:5px var(--gap); margin-top:3px}
 .deckgrid .gcell{
-  display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 1px 4px;
+  position:relative;
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:2px 1px 1px;
   border:1px solid transparent; border-radius:var(--r); background:transparent; overflow:visible;
 }
 .deckgrid .gcell.has{border-color:var(--brass-d); background:#2A2016}
 .deckgrid .gcard{position:relative; display:block; padding:0; background:none; border:0}
 .entry .mini{position:relative}
-.deckgrid .gcard .gn, .entry .mini .gn{       /* 入っている枚数。札の右上に大きく出す */
+.gn{       /* 入っている枚数。札の右上に大きく出す */
   position:absolute; right:-3px; top:-4px; z-index:20;   /* 札の外枠（z-index 6〜7）より前に出す */ min-width:19px; height:19px; padding:0 4px;
   border-radius:10px; display:grid; place-items:center;
   font-family:var(--f-num); font-weight:600; font-size:12px; line-height:1;
   background:linear-gradient(#C08C33,#8A5C18); border:1px solid #F0DCA6; color:#26170A;
   box-shadow:0 1px 4px rgba(0,0,0,.6);
 }
-.deckgrid .gcell:not(.has) .gcard .gn{display:none}
+/* 右上の数字そのものが「1枚減らす」ボタン。札の下に段を作らずに済むので、
+   どの札も同じ高さになり、一度に見える枚数が増える。 */
+.deckgrid .gminus{
+  position:absolute; right:-7px; top:-8px; z-index:21;
+  width:38px; height:38px; padding:0; margin:0; background:none; border:0;
+  display:grid; place-items:center;
+}
+.deckgrid .gminus .gn{
+  position:static; display:flex; align-items:center; justify-content:center;
+  min-width:25px; height:25px; padding:0 5px; font-size:13px; border-radius:13px;
+}
+.deckgrid .gminus .gn::after{content:"−"; margin-left:3px; font-size:14px; opacity:.6}
+.deckgrid .gminus:hover .gn{background:linear-gradient(#E0A845,#A06A20)}
 .entry .stepper{gap:5px}
 .entry .stepper .btn{min-width:42px}
 .entry .stepper .btn[disabled]{opacity:.3}
 .deckgrid .gcell{width:var(--cw)}
-.deckgrid .gstep{display:flex; align-items:center; justify-content:center; gap:1px; width:100%}
-.deckgrid .gstep .btn{padding:1px 0; min-width:0; flex:1; font-size:11px; line-height:1.3}
-.deckgrid .gstep .n{font-family:var(--f-num); font-size:13px; min-width:1.5em; text-align:center; color:var(--brass-l); flex:none}
-.deckgrid .gcell:not(.has) .gstep .n{color:var(--faint)}
 .deckgrid .ghint{
-  grid-column:1/-1; font-size:10.5px; line-height:1.5; color:var(--mute);
-  border-left:2px solid var(--brass-d); padding:2px 0 2px 8px; margin-bottom:0;
+  grid-column:1/-1; font-size:10.5px; line-height:1.35; color:var(--mute);
+  border-left:2px solid var(--brass-d); padding:0 0 0 7px; margin:0;
 }
-.deckgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:8px; margin-top:2px}
-.entry{display:flex; align-items:flex-start; gap:10px; padding:8px 9px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
+.deckgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:6px; margin-top:0}
+.deckgrid .ghint + .glabel{border-top:0; padding-top:2px}
+.entry{display:flex; align-items:flex-start; gap:9px; padding:6px 8px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
 .entry .mini{--cw:46px; flex:none}
 .entry .info{flex:1; min-width:0}
 .entry.has{border-color:var(--brass-d); background:#2A2016}
@@ -1153,30 +1192,25 @@ select,input[type=text]{
 
   <!-- ============ DECK ============ -->
   <section class="screen" id="sc-deck" hidden>
-    <div class="bar">
-      <button class="btn sm" data-go="home">&#9664; HOME</button>
-      <h2>デッキ編成</h2>
-      <span class="tag">DECK BUILDER</span>
+    <!-- 見出しの帯に「デッキ名・枚数・設定」をまとめ、操作帯を1段ぶん減らしている -->
+    <div class="bar slim">
+      <button class="btn sm" data-go="home">&#9664;<span class="lbl"> HOME</span></button>
+      <div class="deckwho" id="deckWho"></div>
+      <button class="countbtn" id="deckCheck" type="button" aria-label="デッキの中身を確認する">
+        <span class="count tnum" id="deckCount">0<s>/40</s></span>
+      </button>
+      <button class="chip" id="deckOptsBtn" type="button" aria-pressed="false">設定</button>
     </div>
+    <div class="deckprog" id="deckProg" aria-hidden="true"><i id="deckBar" style="width:0%"></i></div>
     <!-- 常に見えている操作帯。ここだけでカードを足し引きできるようにし、
          細かい設定は「設定」を開いたときだけ出す（開く前からカードが見えるようにするため）。 -->
     <div class="deckfix">
-      <div class="deckfix-row">
-        <span class="count tnum" id="deckCount">0<s>/40</s></span>
-        <div class="deckbar"><i id="deckBar" style="width:0%"></i></div>
-        <button class="chip" id="deckCheck" type="button">デッキ確認</button>
-        <button class="chip" id="deckOptsBtn" type="button" aria-pressed="false">設定</button>
-      </div>
       <!-- コストの分布。棒を押すとそのコストだけに絞れる -->
       <div class="curve" id="deckCurve"></div>
       <div class="deckfix-row sub">
         <input type="search" id="deckFind" class="deckfind" placeholder="カード名・効果で探す" autocomplete="off">
         <button class="chip" id="deckOnlyIn" type="button" aria-pressed="false">中だけ</button>
         <button class="chip" id="deckViewBtn" type="button"></button>
-      </div>
-      <div class="deckline">
-        <span class="deckwho" id="deckWho"></span>
-        <span class="deckmix" id="deckMix"></span>
       </div>
     </div>
     <div class="scroll">
@@ -13946,14 +13980,17 @@ const UI = {
     /* ---- 編集中デッキ ---- */
     $('#deckName').value = d.name;
     const total = deckTotal(d);
-    $('#deckWho').innerHTML = `<b>${esc(d.name) || '(無題のデッキ)'}</b> &middot; ${CLASSES[d.cls].kana}`;
+    $('#deckWho').innerHTML = `<b>${esc(d.name) || '(無題のデッキ)'}</b>` +
+      `<s>${CLASSES[d.cls].name} &middot; ${CLASSES[d.cls].kana}${d.limit ? ' &middot; 3枚制限' : ''}</s>`;
     $('#deckOnlyIn').setAttribute('aria-pressed', String(DeckOnlyIn));
     $('#deckOptsBtn').setAttribute('aria-pressed', String(!$('#deckOpts').hidden));
     const shape = deckShape(d);
     $('#deckCurve').innerHTML = curveHTML(shape, DeckCostFilter, true);
-    $('#deckMix').innerHTML = deckMixText(shape);
     $('#deckCount').innerHTML = `${total}<s>/${RULES.deckSize}</s>`;
     $('#deckBar').style.width = Math.min(100, total / RULES.deckSize * 100) + '%';
+    const done = total >= RULES.deckSize;
+    $('#deckProg').classList.toggle('full', done);
+    $('#deckCheck').classList.toggle('full', done);
     $('#deckLimit').checked = !!d.limit;
     $('#deckShowNeutral').checked = showNeutralPool;
     /* エニグマ（ニュートラル）は選ばせない：ニュートラルのカードはどのクラスからも使えるため */
@@ -14025,27 +14062,33 @@ const UI = {
     if (DeckViewMode === 'grid') {
       /* グリッド表示：横に5枚並べて下に続く。並び順の先頭のまとまりごとに見出しを入れる */
       list.appendChild(el('div', 'ghint',
-        '短く押す＝1枚入る　／　長く押す＝効果の画面'));
+        '押す＝1枚入る　右上の数字＝1枚減る　長押し＝効果'));
+      /* 「デッキの中だけ」のときは見出しで区切らず、札を詰めて並べる（枚数が少ないため） */
+      const grouped = !DeckOnlyIn;
       let lastGroup = null;
       pool.forEach(c => {
-        const group = groupLabelFor(c, DeckSortMode);
-        if (group !== lastGroup) { lastGroup = group; list.appendChild(el('div', 'glabel', group)); }
+        if (grouped) {
+          const group = groupLabelFor(c, DeckSortMode);
+          if (group !== lastGroup) { lastGroup = group; list.appendChild(el('div', 'glabel', group)); }
+        }
         const n = d.list[c.id] || 0;
         const cell = el('div', 'gcell' + (n ? ' has' : ''));
-        /* 札そのものが「1枚足す」ボタン。細かい増減は下の ＋ − で行う */
+        /* 札そのものが「1枚足す」ボタン */
         const pick = el('button', 'gcard');
         pick.type = 'button';
         pick.dataset.inc = c.id;
         pick.setAttribute('aria-label', `${c.name} を1枚加える（現在${n}枚）`);
         pick.appendChild(this.staticCard(c.id));
-        pick.appendChild(el('span', 'gn tnum', String(n)));
         cell.appendChild(pick);
-        /* 入っている札だけ ＋ − を出す。0枚の札は札そのものを押せば入るので、
-           並びが軽くなって一度に見える枚数が増える。 */
+        /* 入っている札だけ、右上の枚数を「1枚減らす」ボタンとして出す。
+           札の下に段を作らないので、どの札も同じ高さで並び、一度に見える枚数が増える。 */
         if (n > 0) {
-          const st = el('div', 'gstep');
-          st.innerHTML = `<button class="btn sm" data-dec="${c.id}" aria-label="${esc(c.name)} を1枚減らす">&minus; 1枚</button>`;
-          cell.appendChild(st);
+          const minus = el('button', 'gminus');
+          minus.type = 'button';
+          minus.dataset.dec = c.id;
+          minus.setAttribute('aria-label', `${c.name} を1枚減らす（現在${n}枚）`);
+          minus.appendChild(el('span', 'gn tnum', String(n)));
+          cell.appendChild(minus);
         }
         list.appendChild(cell);
       });
@@ -14090,10 +14133,9 @@ const UI = {
       return (x.cost - y.cost) || (x.ver || 1) - (y.ver || 1) || x.name.localeCompare(y.name, 'ja');
     });
     if (!ids.length) { grid.appendChild(el('p', 'empty', 'まだ1枚も入っていない。')); }
-    let lastCost = null;
+    /* コストの見出しは入れない。札の左上にコストが出ているうえ、見出しで段が割れると
+       40枚を見渡すのに何度も巻くことになるため、コストの小さい順に詰めて並べる。 */
     ids.forEach(id => {
-      const c = CARD_BY_ID[id];
-      if (c.cost !== lastCost) { lastCost = c.cost; grid.appendChild(el('div', 'glabel', 'コスト ' + c.cost)); }
       const cell = el('div', 'ccell');
       cell.appendChild(this.staticCard(id));
       cell.appendChild(el('span', 'cn tnum', String(d.list[id])));
@@ -14108,7 +14150,15 @@ const UI = {
     if (!list || list.className !== 'deckgrid') return;
     const w = list.clientWidth;
     if (!w) { requestAnimationFrame(() => this.sizeDeckGrid()); return; }   // 画面がまだ表示されていない
-    const gap = 5, cw = Math.max(40, Math.floor((w - gap * 4) / 5));
+    /* 横に入るだけ並べる。細い画面は5枚のまま、横画面や広い画面では列を増やして
+       一度に見える枚数を増やす（めくる回数を減らすため） */
+    const gap = 5;
+    /* 画面が低いとき（横画面など）は札を少し小さくして、並ぶ行数を稼ぐ */
+    const box = list.closest('.scroll');
+    const target = (box && box.clientHeight && box.clientHeight < 430) ? 58 : 72;
+    const cols = Math.max(5, Math.min(14, Math.floor((w + gap) / target)));
+    const cw = Math.max(40, Math.floor((w - gap * (cols - 1)) / cols));
+    list.style.setProperty('--cols', String(cols));
     list.style.setProperty('--cw', cw + 'px');
   },
 

@@ -153,7 +153,7 @@ const ok = (n, c, d = '') => OUT.push((c ? 'PASS ' : 'FAIL ') + n + (d ? ' :: ' 
   ok('PP表にターンが1つも欠けていない', pp.turns === pp.expect, JSON.stringify(pp));
   ok('PP表は1つあたり8列まで（細い画面に収まる幅）', pp.cols.every(c => c <= 8), JSON.stringify(pp));
   const bars = await pg.evaluate(() => ['rule', 'cards', 'deck'].map(s => { UI.go(s);
-    const h = document.querySelector('#sc-' + s + ' .bar h2');
+    const h = document.querySelector('#sc-' + s + ' .bar h2, #sc-' + s + ' .bar .deckwho b');
     return { s, h: Math.round(h.getBoundingClientRect().height), fs: Math.round(parseFloat(getComputedStyle(h).fontSize)) }; }));
   ok('画面名の見出しが1行に収まる', bars.every(x => x.h <= x.fs * 1.8), JSON.stringify(bars));
   await ctx.close();
