@@ -10,6 +10,7 @@ const URL = pathToFileURL(join(dirname(dirname(fileURLToPath(import.meta.url))),
 const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium' });
 const OUT = [];
 const ok = (n, c, d = '') => OUT.push((c ? 'PASS ' : 'FAIL ') + n + (d ? ' :: ' + d : ''));
+let CARD_NAME_OF = () => '';
 const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, deviceScaleFactor: 2, isMobile: true, hasTouch: true });
 
 /* ================= [A] デッキ編成 ================= */
@@ -19,6 +20,10 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
   await pg.route('**/*fonts.g*.com/**', r => r.abort());
   await pg.goto(URL); await pg.waitForTimeout(900);
   await pg.evaluate(() => UI.go('deck')); await pg.waitForTimeout(700);
+  CARD_NAME_OF = id => CARD_NAMES[id] || '';
+  const CARD_NAMES = await pg.evaluate(() => {
+    const m = {}; CARDS.forEach(c => { m[c.id] = c.name; }); return m;
+  });
 
   /* 開いた瞬間に札が見えているか（設定を抜けるまで延々と巻かずに済むか） */
   const first = await pg.evaluate(() => {
@@ -161,6 +166,63 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
   ok('入っている札は札の右上に枚数が出る',
      read.badges.length > 0 && read.badges.every(x => x && +x > 0), JSON.stringify(read.badges));
   ok('0枚の札は減らすボタンを押せない', read.zeroDisabled, String(read.zeroDisabled));
+
+  /* 短く押す＝1枚入る、長く押す＝効果の画面。指を滑らせた時は開かない。 */
+  const prep = await pg.evaluate(() => {
+    DeckViewMode = 'grid'; UI.renderDeck();
+    const d = findDeck(DeckEditId);
+    while (deckTotal(d) >= RULES.deckSize - 1) {          // 足せる余地を2枚ぶん空ける
+      const k = Object.keys(d.list)[0];
+      d.list[k] -= 1; if (!d.list[k]) delete d.list[k];
+    }
+    saveDecks(); UI.renderDeck();
+    const cell = [...document.querySelectorAll('#deckList .gcell')].find(x => !x.classList.contains('has'));
+    const r = cell.querySelector('.card').getBoundingClientRect();
+    return { id: cell.querySelector('.gcard').dataset.inc, total: deckTotal(d),
+             x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  });
+  const posOf = id => pg.evaluate(cid => {
+    const cell = [...document.querySelectorAll('#deckList .gcell')]
+      .find(x => x.querySelector('.gcard').dataset.inc === cid);
+    const r = cell.querySelector('.card').getBoundingClientRect();
+    return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+  }, id);
+
+  /* 短く押す */
+  let p1 = await posOf(prep.id);
+  await pg.mouse.move(p1.x, p1.y); await pg.mouse.down(); await pg.waitForTimeout(90); await pg.mouse.up();
+  await pg.waitForTimeout(250);
+  const tap = await pg.evaluate(cid => ({
+    total: deckTotal(findDeck(DeckEditId)), n: findDeck(DeckEditId).list[cid] || 0,
+    detail: !document.querySelector('#ovDetail').hidden }), prep.id);
+  ok('並べる：短く押すと1枚入る（効果の画面は開かない）',
+     tap.total === prep.total + 1 && tap.n === 1 && tap.detail === false, JSON.stringify({ prep: prep.total, tap }));
+
+  /* 長く押す */
+  let p2 = await posOf(prep.id);
+  await pg.mouse.move(p2.x, p2.y); await pg.mouse.down(); await pg.waitForTimeout(650); await pg.mouse.up();
+  await pg.waitForTimeout(300);
+  const hold = await pg.evaluate(cid => ({
+    total: deckTotal(findDeck(DeckEditId)), n: findDeck(DeckEditId).list[cid] || 0,
+    detail: !document.querySelector('#ovDetail').hidden,
+    name: (document.querySelector('#ovDetail .dhead h3') || {}).textContent || null,
+    text: !!document.querySelector('#ovDetail .ctext') }), prep.id);
+  ok('並べる：長く押すと効果の画面が開く', hold.detail && hold.text, JSON.stringify(hold));
+  ok('長く押した時は枚数が増えない（短押しと二重に働かない）',
+     hold.total === tap.total && hold.n === tap.n, JSON.stringify({ tap, hold }));
+  ok('開いた画面が押した札のもの',
+     hold.name && hold.name.indexOf(CARD_NAME_OF(prep.id)) >= 0, String(hold.name));
+
+  /* 押しながら指を滑らせた時（スクロール）は開かない */
+  await pg.evaluate(() => UI.closeDetail());
+  let p3 = await posOf(prep.id);
+  await pg.mouse.move(p3.x, p3.y); await pg.mouse.down();
+  await pg.waitForTimeout(140); await pg.mouse.move(p3.x, p3.y - 70);
+  await pg.waitForTimeout(500); await pg.mouse.up();
+  await pg.waitForTimeout(250);
+  const drag = await pg.evaluate(() => !document.querySelector('#ovDetail').hidden);
+  ok('押しながら動かした時（巻いている時）は開かない', drag === false, String(drag));
+  await pg.evaluate(() => UI.closeDetail());
 
   /* 押し方の案内が候補の先頭に出ている */
   const hint = await pg.evaluate(() => {

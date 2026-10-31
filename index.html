@@ -814,7 +814,7 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .deckgrid .gstep .n{font-family:var(--f-num); font-size:13px; min-width:1.5em; text-align:center; color:var(--brass-l); flex:none}
 .deckgrid .gcell:not(.has) .gstep .n{color:var(--faint)}
 .deckgrid .ghint{
-  grid-column:1/-1; font-size:11px; line-height:1.7; color:var(--mute);
+  grid-column:1/-1; font-size:11px; line-height:1.7; color:var(--mute); white-space:pre-line;
   background:#201810; border:1px solid var(--edge); border-left:2px solid var(--brass-d);
   border-radius:0 3px 3px 0; padding:6px 10px; margin-bottom:2px;
 }
@@ -13309,7 +13309,8 @@ const UI = {
     if (DeckViewMode === 'grid') {
       /* グリッド表示：横に5枚並べて下に続く。並び順の先頭のまとまりごとに見出しを入れる */
       list.appendChild(el('div', 'ghint',
-        '札を押すと1枚入る。効果の文を読みながら足し引きするときは「効果を読む」に切り替える。'));
+        '札を短く押すと1枚入る。長く押すと効果の画面が開く。\n' +
+        '効果の文を読みながら足し引きしたいときは「効果を読む」に切り替える。'));
       let lastGroup = null;
       pool.forEach(c => {
         const group = groupLabelFor(c, DeckSortMode);
@@ -14527,7 +14528,13 @@ function initEvents() {
     const nm = document.querySelector(`.libmain[data-pick-deck="${d.id}"] .libname`);
     if (nm) nm.textContent = d.name || '(無題のデッキ)';
   });
+  /* 並べる側：短く押すと1枚入る、長く押すと効果の画面が開く */
+  attachLongPress($('#deckList'), '[data-card-id]', node => {
+    const id = node.dataset.cardId;
+    if (id) { Sfx.play('chime'); UI.showDetail(id); }
+  });
   $('#deckList').addEventListener('click', e => {
+    if (longPressJustFired($('#deckList'))) return;     // 長押しで開いたので、足さない
     const inc = e.target.closest('[data-inc]'), dec = e.target.closest('[data-dec]');
     if (!inc && !dec) {
       const card = e.target.closest('[data-card-id]');
@@ -14808,6 +14815,38 @@ function updateMuteLabel() {
   if (m) m.textContent = Bgm.on
     ? '♫ 音楽 ON' + (Bgm.key ? '：' + (BGM_TRACKS[Bgm.key] || {}).name : '')
     : '♫ 音楽 OFF';
+}
+
+/* 長押しを自前で拾う。端末まかせの長押し（文字選択・メニュー）は止めてあるので、
+   押している時間を測って判定する。指が動いたら（＝スクロール）取り消す。
+   長押しが成立したら、そのあと続けて起きる click は1回だけ無視する。 */
+const LONG_PRESS_MS = 420, LONG_PRESS_SLOP = 12;
+function attachLongPress(root, selector, run) {
+  let timer = null, startX = 0, startY = 0, target = null;
+  const clear = () => { if (timer) clearTimeout(timer); timer = null; target = null; };
+  root.addEventListener('pointerdown', e => {
+    const t = e.target.closest(selector); if (!t) return;
+    target = t; startX = e.clientX; startY = e.clientY;
+    timer = setTimeout(() => {
+      timer = null;
+      if (!target) return;
+      root.dataset.longFired = '1';            // 直後の click を1回だけ無視させる
+      const hit = target; target = null;
+      if (navigator.vibrate) { try { navigator.vibrate(12); } catch (err) { /* 未対応なら何もしない */ } }
+      run(hit);
+    }, LONG_PRESS_MS);
+  }, { passive: true });
+  root.addEventListener('pointermove', e => {
+    if (!timer) return;
+    if (Math.abs(e.clientX - startX) > LONG_PRESS_SLOP || Math.abs(e.clientY - startY) > LONG_PRESS_SLOP) clear();
+  }, { passive: true });
+  ['pointerup', 'pointercancel', 'pointerleave', 'scroll'].forEach(ev =>
+    root.addEventListener(ev, clear, { passive: true }));
+}
+/* 長押しが成立した直後の click かどうか。成立していたら true を返し、印を消す */
+function longPressJustFired(root) {
+  if (root.dataset.longFired) { delete root.dataset.longFired; return true; }
+  return false;
 }
 
 /* 指で遊ぶ前提の画面なので、端末まかせの拡大と長押しメニューを止める。
