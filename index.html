@@ -988,13 +988,45 @@ select,input[type=text]{
 .mver{display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 9px; margin:2px 0 11px; padding:8px 10px; background:#211910; border:1px solid #3A2B1C; border-radius:var(--r)}
 .mver b{font-family:var(--f-type); font-size:10px; letter-spacing:.16em; color:var(--brass-l)}
 .mver s{text-decoration:none; font-size:11px; color:var(--mute); line-height:1.6}
-.mlegend{display:flex; align-items:center; gap:8px; margin-top:10px; font-size:10.5px; color:var(--mute)}
+.mlegend{display:flex; align-items:center; flex-wrap:wrap; gap:4px 8px; margin-top:10px; font-size:10.5px; color:var(--mute)}
 .mlegend .ramp{flex:1; max-width:220px; height:8px; border-radius:4px; background:linear-gradient(90deg,#AE4429,#7C6C55,#5E9C4E)}
 .msummary{display:grid; gap:8px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); margin-top:14px}
 .msum-card{padding:9px 10px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r); border-left:3px solid var(--c)}
 .msum-card b{display:block; font-size:13px; margin-bottom:3px}
 .msum-card .mrate{font-family:var(--f-num); font-size:20px}
 .msum-card s{display:block; text-decoration:none; font-size:10.5px; color:var(--mute); margin-top:2px}
+
+/* ---- 戦績（自分がやった試合から相性表をつくる） ---- */
+.recgrid{display:grid; gap:9px; grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}
+.recgrid label{display:block; font-family:var(--f-type); font-size:9.5px; letter-spacing:.12em; color:var(--faint); margin-bottom:3px}
+.recgrid input, .recgrid select{
+  width:100%; min-height:38px; font-family:var(--f-body); font-size:13px; padding:6px 9px;
+  background:#1A130B; border:1px solid var(--edge2); border-radius:2px; color:var(--sand);
+}
+.recgrid input::placeholder{color:var(--faint)}
+.reclist{display:flex; flex-direction:column; gap:5px; margin-top:10px}
+.recrow{
+  display:flex; align-items:center; gap:9px; padding:7px 9px;
+  background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r); border-left:3px solid var(--c,var(--edge2));
+}
+.recrow .rmain{flex:1; min-width:0}
+.recrow .rwho{font-size:12.5px; line-height:1.4; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.recrow .rwho i{font-style:normal; color:var(--faint)}
+.recrow .rsub{
+  font-family:var(--f-type); font-size:9px; letter-spacing:.08em; color:var(--faint); margin-top:2px;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+.recrow .rres{
+  flex:none; font-family:var(--f-type); font-size:10px; letter-spacing:.1em; padding:4px 7px; border-radius:2px;
+}
+.recrow .rres.win{background:#2C3E24; color:#B7DFA2; border:1px solid #5E9C4E}
+.recrow .rres.lose{background:#3A211A; color:#E8B09A; border:1px solid #AE4429}
+.recrow .rres.draw{background:#2A2419; color:var(--mute); border:1px solid var(--edge2)}
+.recempty{margin-top:14px}
+/* 相性表は横に長くなるので、戦績の表だけマスを詰めて細い画面に寄せる */
+#recOut .mtx td.cell{min-width:50px; height:42px}
+#recOut .mtx tbody th{font-size:9px; padding:0 6px; max-width:116px; overflow:hidden; text-overflow:ellipsis}
+#recOut .mtx thead th{padding:6px 4px}
 
 @media (max-width:620px){
   .home-in{grid-template-columns:1fr; align-content:start}
@@ -1079,6 +1111,7 @@ select,input[type=text]{
         <button class="sign" data-go="community"><span class="k">COMMUNITY</span><span class="d">デッキを投稿・共有</span></button>
         <button class="sign" data-go="format"><span class="k">FORMAT</span><span class="d">フォーマットデッキ一覧</span></button>
         <button class="sign" data-go="matchup"><span class="k">MATCHUP</span><span class="d">相性検証（自動対戦で解析）</span></button>
+        <button class="sign" data-go="record"><span class="k">RECORD</span><span class="d">自分の戦績から相性表をつくる</span></button>
         <button class="sign" data-go="cards"><span class="k">CARDS</span><span class="d">カード一覧・詳細</span></button>
         <button class="sign" data-go="rule"><span class="k">RULE</span><span class="d">ルールブック</span></button>
       </nav>
@@ -1326,6 +1359,42 @@ select,input[type=text]{
         </div>
       </div>
       <div id="matchResult"></div>
+    </div>
+  </section>
+
+  <!-- ============ RECORD（自分の戦績） ============ -->
+  <section class="screen" id="sc-record" hidden>
+    <div class="bar">
+      <button class="btn sm" data-go="home">&#9664; HOME</button>
+      <h2>戦績</h2>
+      <span class="tag">MY MATCHUP</span>
+    </div>
+    <div class="scroll">
+      <div class="ov-row" style="justify-content:flex-start; margin-bottom:10px">
+        <button class="btn pri" id="recFormBtn" type="button" aria-pressed="false" aria-controls="recForm">試合を足す</button>
+      </div>
+      <div class="panel" id="recForm" hidden>
+        <p class="note">自分が実際に遊んだ試合を入れると、下に自分だけの相性表ができる。決着の画面の「戦績に残す」からも1押しで入る。</p>
+        <datalist id="recDeckList"></datalist>
+        <div class="recgrid">
+          <div><label for="recMeCls">自分のクラス</label><select id="recMeCls"></select></div>
+          <div><label for="recMeDeck">自分のデッキ</label><input type="text" id="recMeDeck" list="recDeckList" maxlength="24" placeholder="デッキ名（任意）"></div>
+          <div><label for="recOppCls">相手のクラス</label><select id="recOppCls"></select></div>
+          <div><label for="recOppDeck">相手のデッキ</label><input type="text" id="recOppDeck" list="recDeckList" maxlength="24" placeholder="デッキ名（任意）"></div>
+        </div>
+        <label class="hint" style="display:block; margin:10px 0 4px">先攻・後攻</label>
+        <div class="opt" id="recFirst"></div>
+        <label class="hint" style="display:block; margin:10px 0 4px">結果</label>
+        <div class="opt" id="recResult"></div>
+        <div class="recgrid" style="margin-top:10px">
+          <div><label for="recTurns">ターン数（任意）</label><input type="number" id="recTurns" min="1" max="99" placeholder="&mdash;"></div>
+          <div><label for="recNote">ひとこと（任意）</label><input type="text" id="recNote" maxlength="40" placeholder="&mdash;"></div>
+        </div>
+        <div class="ov-row" style="margin-top:12px; justify-content:flex-start">
+          <button class="btn pri" id="recAdd" type="button">この試合を記録する</button>
+        </div>
+      </div>
+      <div id="recOut"></div>
     </div>
   </section>
 
@@ -1638,7 +1707,7 @@ const BGM_TRACKS = {
 /* 画面と曲の対応。ここに無い画面は「出立の支度」を流す */
 const BGM_FOR_SCREEN = {
   home: 'home', setup: 'menu', twopick: 'menu', pickrun: 'menu', community: 'menu', format: 'menu',
-  deck: 'deck', cards: 'deck', rule: 'rule', matchup: 'matchup', battle: 'battle'
+  deck: 'deck', cards: 'deck', rule: 'rule', matchup: 'matchup', record: 'matchup', battle: 'battle'
 };
 
 /* 音楽全体の音量と、これ以上は大きくしない上限。
@@ -12596,7 +12665,7 @@ function mechanicsOf(cardId) {
   return out;
 }
 
-const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'cards', 'rule', 'battle'];
+const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'record', 'cards', 'rule', 'battle'];
 let Settings = { timer: store.get('timer', 90), first: store.get('first', 'random') };
 
 /* ============================ デッキ管理 ============================
@@ -13153,6 +13222,7 @@ function fullRuleText() {
   li('COMMUNITY（みんなのデッキ）… 自分の保存済みデッキを投稿して他の人と共有し、他の人が投稿したデッキを自分の保存済みデッキに登録して使える。投稿は同じページを開いている人に見え、削除は投稿した本人（その端末）だけができる。');
   li('FORMAT（フォーマットデッキ一覧）… 完成済みのデッキを閲覧し、デッキ文をコピーしたり、自分の保存済みデッキに登録できる。');
   li('MATCHUP（相性検証）… フォーマットデッキ同士を自動対戦させ、勝率の表を作る。バージョンを選んで検証できる。');
+  li('RECORD（戦績）… 自分が実際に遊んだ試合の結果をためて、自分だけの相性表を作る。決着の画面から1押しで記録できる。');
   li('CARDS（カード一覧）… 全カードを絞り込んで見比べ、1枚ずつ詳細（効果の全文・関連カード・用語の解説）を開ける。');
   li('RULE（ルールブック）… この文章の元になっている項目別のルール。一番下にこの全文がある。');
 
@@ -13301,6 +13371,9 @@ function fullRuleText() {
   li('バージョンを選ぶと、その時期のデッキだけで総当たりする。' +
      VERSIONS.filter(v => matchupPairs(v).length).map(v => verLabel(v) + 'は' + matchupPairs(v).length + '組').join('、') + '。');
   li('1組あたりの試合数を選べる。勝率は、不利を錆色、五分を灰色、有利を緑で表す。');
+  li('これとは別に「戦績」では、自分が実際に遊んだ試合の結果から相性表を作る。' +
+     '決着の画面の「戦績に残す」を押すと、自分と相手のクラス・デッキ名・先攻後攻・勝敗・ターン数がそのまま残る。' +
+     '手で入れることもでき、クラス単位と自分のデッキ単位で見比べられる。記録はこの端末に保存される。');
 
   head('23. 覚えておきたい細かい裁定');
   li('ファンファーレは手札から出したときだけ働く。効果で場に出した場合は働かない。「場に出た時」はどちらでも働く。');
@@ -13572,6 +13645,29 @@ function saveTwoPickDeck(name, src) {
 let MatchupGames = 10;                                    // 相性検証：組み合わせごとの対戦回数
 /* 相性検証：使うフォーマットデッキのバージョン。デッキが揃っている一番新しいバージョンから始める */
 let MatchupVer = VERSIONS.filter(v => matchupPairs(v).length).slice(-1)[0] || VERSIONS[0];
+/* ---- 戦績：自分が実際に遊んだ試合 ---- */
+let MyRecords = store.get('myRecords', []);
+let RecUnit = store.get('recUnit', 'class');               // 相性表の単位：クラス／自分のデッキ
+let RecForm = { first: 'me', result: 'win' };              // 入力中の「先攻・後攻」と「結果」
+const REC_FIRSTS = [['me', '自分が先攻'], ['opp', '相手が先攻'], ['', 'わからない']];
+const REC_RESULTS = [['win', '勝ち'], ['lose', '負け'], ['draw', '引き分け']];
+const REC_UNITS = [['class', 'クラスで見る'], ['deck', '自分のデッキで見る']];
+function saveRecords() { store.set('myRecords', MyRecords); }
+/* 1試合ぶんを足す。決着の画面からも、戦績の画面の入力欄からも、ここを通る */
+function addRecord(r) {
+  MyRecords.push(Object.assign({ id: 'r' + Date.now() + Math.random().toString(36).slice(2, 6), at: Date.now() }, r));
+  if (MyRecords.length > 2000) MyRecords = MyRecords.slice(-2000);
+  saveRecords();
+}
+/* 条件に合う記録を数える */
+function recTally(list) {
+  const t = { win: 0, lose: 0, draw: 0 };
+  list.forEach(r => { if (t[r.result] != null) t[r.result]++; });
+  t.n = t.win + t.lose + t.draw;
+  t.decided = t.win + t.lose;
+  t.pct = t.decided ? Math.round(t.win / t.decided * 100) : null;
+  return t;
+}
 let MatchupTable = null, MatchupBusy = false;             // 相性検証：直近の結果と実行中フラグ
 let MatchupTableVer = null;                               // その結果がどのバージョンのものか
 let FormatVerFilter = '';                                 // フォーマットデッキ一覧の絞り込み（''＝すべて）
@@ -13666,6 +13762,7 @@ const UI = {
     if (name === 'community') { communitySubscribe(); this.renderCommunity(); }
     if (name === 'format') this.renderFormat();
     if (name === 'matchup') this.renderMatchup();
+    if (name === 'record') this.renderRecord();
     if (name === 'cards') this.renderCards();
     if (name === 'rule') this.renderRule();
     Bgm.forScreen(name);                                   // その場に合った曲に替える
@@ -14272,6 +14369,147 @@ const UI = {
     $('#textArea').value = str;
     $('#textArea').dataset.label = o.label || 'デッキ文';
     $('#ovText').hidden = false;
+  },
+
+  /* ---- 戦績：自分がやった試合から相性表をつくる ---- */
+  renderRecord() {
+    /* クラスの選び口とデッキ名の候補は、開くたびに作り直す（デッキが増えているかもしれない） */
+    const clsOpts = MATCHUP_CLASSES.map(k => [k, CLASSES[k].name]);
+    [['#recMeCls', 'formation'], ['#recOppCls', 'formation']].forEach(([sel, def]) => {
+      const n = $(sel), keep = n.value;
+      n.innerHTML = clsOpts.map(([v, l]) => `<option value="${v}">${esc(l)}</option>`).join('');
+      n.value = keep || def;
+    });
+    const names = [];
+    Decks.forEach(d => { if (d.name && names.indexOf(d.name) < 0) names.push(d.name); });
+    FORMAT_DECKS.forEach(f => { if (names.indexOf(f.name) < 0) names.push(f.name); });
+    MyRecords.forEach(r => [r.meDeck, r.oppDeck].forEach(x => { if (x && names.indexOf(x) < 0) names.push(x); }));
+    $('#recDeckList').innerHTML = names.map(n => `<option value="${esc(n)}"></option>`).join('');
+
+    const chips = (sel, list, cur, key) => {
+      const box = $(sel); box.innerHTML = '';
+      list.forEach(([v, l]) => {
+        const b = el('button', 'chip', esc(l));
+        b.type = 'button'; b.dataset[key] = v; b.setAttribute('aria-pressed', String(v === cur));
+        box.appendChild(b);
+      });
+    };
+    chips('#recFirst', REC_FIRSTS, RecForm.first, 'recFirst');
+    chips('#recResult', REC_RESULTS, RecForm.result, 'recResult');
+    const form = $('#recForm');
+    if (!MyRecords.length) form.hidden = false;            // まだ1件も無いなら最初から開けておく
+    $('#recFormBtn').setAttribute('aria-pressed', String(!form.hidden));
+    this.renderRecordOut();
+  },
+
+  /* 相性表・まとめ・履歴 */
+  renderRecordOut() {
+    const box = $('#recOut'); box.innerHTML = '';
+    if (!MyRecords.length) {
+      box.appendChild(el('p', 'note recempty',
+        'まだ1試合も記録していない。上の欄に入れるか、決闘の決着画面の「戦績に残す」を押すとたまっていく。'));
+      return;
+    }
+    const all = recTally(MyRecords);
+    const asFirst = recTally(MyRecords.filter(r => r.first === 'me'));
+    const asSecond = recTally(MyRecords.filter(r => r.first === 'opp'));
+
+    /* ---- まとめ ---- */
+    const sum = el('div', 'msummary');
+    const card = (label, t, extra) => {
+      const c = el('div', 'msum-card'); c.style.setProperty('--c', 'var(--brass)');
+      c.innerHTML = `<b>${esc(label)}</b>` +
+        `<span class="mrate tnum" style="color:${t.pct == null ? 'var(--faint)' : winRateColor(t.pct)}">` +
+        `${t.pct == null ? '&mdash;' : t.pct + '%'}</span>` +
+        `<s>${t.win}勝 ${t.lose}敗${t.draw ? ` ${t.draw}分` : ''}${extra ? ' ・ ' + extra : ''}</s>`;
+      return c;
+    };
+    sum.appendChild(card('通算', all, `${all.n}戦`));
+    sum.appendChild(card('先攻のとき', asFirst, ''));
+    sum.appendChild(card('後攻のとき', asSecond, ''));
+    box.appendChild(sum);
+
+    /* ---- 単位の切り替え ---- */
+    const unit = el('div', 'opt'); unit.style.marginTop = '12px';
+    REC_UNITS.forEach(([v, l]) => {
+      const b = el('button', 'chip', esc(l));
+      b.type = 'button'; b.dataset.recUnit = v; b.setAttribute('aria-pressed', String(v === RecUnit));
+      unit.appendChild(b);
+    });
+    box.appendChild(unit);
+
+    /* ---- 相性表。縦が自分、横が相手 ---- */
+    const rows = RecUnit === 'class'
+      ? MATCHUP_CLASSES.map(k => ({ key: k, label: CLASSES[k].name, color: CLASSES[k].color,
+          match: r => r.meCls === k }))
+      : (() => {
+          const seen = [];
+          MyRecords.forEach(r => { const n = r.meDeck || '(名前なし)'; if (seen.indexOf(n) < 0) seen.push(n); });
+          return seen.map(n => ({ key: n, label: n, color: 'var(--brass-d)',
+            match: r => (r.meDeck || '(名前なし)') === n }));
+        })();
+    const wrap = el('div', 'mtwrap');
+    const table = el('table', 'mtx');
+    const thead = el('thead'), hr = el('tr');
+    hr.appendChild(el('th', '', RecUnit === 'class' ? '自分＼相手' : 'デッキ＼相手'));
+    MATCHUP_CLASSES.forEach(c =>
+      hr.appendChild(el('th', '', `<span class="cdot" style="background:${CLASSES[c].color}"></span>${CLASSES[c].name}`)));
+    hr.appendChild(el('th', '', '合計'));
+    thead.appendChild(hr); table.appendChild(thead);
+    const tbody = el('tbody');
+    rows.forEach(row => {
+      const tr = el('tr');
+      tr.appendChild(el('th', '', `<span class="cdot" style="background:${row.color}"></span>${esc(row.label)}`));
+      MATCHUP_CLASSES.forEach(c => {
+        const t = recTally(MyRecords.filter(r => row.match(r) && r.oppCls === c));
+        if (!t.n) { tr.appendChild(el('td', 'cell nodata', '&mdash;')); return; }
+        const td = el('td', 'cell',
+          `<b style="color:${t.pct == null ? 'var(--faint)' : winRateColor(t.pct)}">${t.pct == null ? '&mdash;' : t.pct + '%'}</b>` +
+          `<s>${t.win}-${t.lose}${t.draw ? '-' + t.draw : ''}</s>`);
+        td.title = `${row.label} vs ${CLASSES[c].name}：${t.win}勝${t.lose}敗${t.draw ? t.draw + '分' : ''}`;
+        tr.appendChild(td);
+      });
+      const tt = recTally(MyRecords.filter(row.match));
+      tr.appendChild(el('td', 'cell',
+        `<b style="color:${tt.pct == null ? 'var(--faint)' : winRateColor(tt.pct)}">${tt.pct == null ? '&mdash;' : tt.pct + '%'}</b>` +
+        `<s>${tt.n}戦</s>`));
+      tbody.appendChild(tr);
+    });
+    table.appendChild(tbody); wrap.appendChild(table); box.appendChild(wrap);
+    box.appendChild(el('div', 'mlegend',
+      '<span>不利</span><span class="ramp"></span><span>有利</span>' +
+      '<span style="margin-left:auto">数字は勝率／下は 勝-敗-分</span>'));
+
+    /* ---- 履歴 ---- */
+    box.appendChild(el('h3', '', `記録（新しい順・${MyRecords.length}件）`));
+    const list = el('div', 'reclist');
+    const fmt = t => { const d = new Date(t); return `${d.getMonth() + 1}/${d.getDate()}`; };
+    MyRecords.slice().reverse().slice(0, 60).forEach(r => {
+      const row = el('div', 'recrow');
+      row.style.setProperty('--c', (CLASSES[r.meCls] || CLASSES.neutral).color);
+      const rl = REC_RESULTS.find(x => x[0] === r.result);
+      const sub = [fmt(r.at)];
+      if (r.first === 'me') sub.push('先攻'); else if (r.first === 'opp') sub.push('後攻');
+      if (r.turns) sub.push(r.turns + 'ターン');
+      if (r.meDeck || r.oppDeck) sub.push(`${r.meDeck || '?'} → ${r.oppDeck || '?'}`);
+      if (r.note) sub.push(r.note);
+      row.innerHTML =
+        `<div class="rmain">
+           <div class="rwho">${esc((CLASSES[r.meCls] || CLASSES.neutral).name)} <i>vs</i> ` +
+        `${esc((CLASSES[r.oppCls] || CLASSES.neutral).name)}</div>
+           <div class="rsub">${esc(sub.join(' ・ '))}</div>
+         </div>
+         <span class="rres ${r.result}">${rl ? rl[1] : ''}</span>
+         <button class="btn sm" data-rec-del="${r.id}" type="button" aria-label="この記録を消す">消す</button>`;
+      list.appendChild(row);
+    });
+    box.appendChild(list);
+    if (MyRecords.length > 60) box.appendChild(el('p', 'note', `（新しい60件だけ出している。相性表には${MyRecords.length}件すべてが入っている）`));
+
+    const acts = el('div', 'ov-row'); acts.style.cssText = 'margin-top:12px; justify-content:flex-start';
+    acts.innerHTML = '<button class="btn sm" id="recCopy" type="button">戦績をコピー</button>' +
+      '<button class="btn sm" id="recClear" type="button">全部消す</button>';
+    box.appendChild(acts);
   },
 
   /* ---- 相性検証 ---- */
@@ -15005,6 +15243,7 @@ const UI = {
        <p class="note">${esc(G.log.slice(-3).join(' / '))}</p>
        <div class="ov-row">
          <button class="btn" data-res="home">ホームへ</button>
+         <button class="btn" data-res="record" id="resRecord">戦績に残す</button>
          <button class="btn pri" data-res="again">もう一度決闘する</button>
        </div>`;
     $('#ovResult').hidden = false;
@@ -15435,6 +15674,62 @@ function initEvents() {
     const b = e.target.closest('[data-fmt-ver]'); if (!b) return;
     FormatVerFilter = b.dataset.fmtVer; Sfx.play('click'); UI.renderFormat();
   });
+  /* ---- 戦績 ---- */
+  $('#recFormBtn').addEventListener('click', () => {
+    const f = $('#recForm'); f.hidden = !f.hidden;
+    $('#recFormBtn').setAttribute('aria-pressed', String(!f.hidden));
+    Sfx.play('click');
+  });
+  $('#recFirst').addEventListener('click', e => {
+    const b = e.target.closest('[data-rec-first]'); if (!b) return;
+    RecForm.first = b.dataset.recFirst; UI.renderRecord(); Sfx.play('click');
+  });
+  $('#recResult').addEventListener('click', e => {
+    const b = e.target.closest('[data-rec-result]'); if (!b) return;
+    RecForm.result = b.dataset.recResult; UI.renderRecord(); Sfx.play('click');
+  });
+  $('#recAdd').addEventListener('click', () => {
+    const turns = parseInt($('#recTurns').value, 10);
+    addRecord({
+      meCls: $('#recMeCls').value, meDeck: $('#recMeDeck').value.trim(),
+      oppCls: $('#recOppCls').value, oppDeck: $('#recOppDeck').value.trim(),
+      first: RecForm.first, result: RecForm.result,
+      turns: turns > 0 ? Math.min(99, turns) : null, note: $('#recNote').value.trim()
+    });
+    /* クラスとデッキ名は続けて同じものを入れることが多いので残し、1試合ごとに変わるものだけ消す */
+    $('#recTurns').value = ''; $('#recNote').value = '';
+    UI.renderRecord(); Sfx.play('card');
+    UI.toast(`記録した（通算${MyRecords.length}戦）`);
+  });
+  $('#recOut').addEventListener('click', async e => {
+    const u = e.target.closest('[data-rec-unit]');
+    if (u) { RecUnit = u.dataset.recUnit; store.set('recUnit', RecUnit); UI.renderRecordOut(); Sfx.play('click'); return; }
+    const d = e.target.closest('[data-rec-del]');
+    if (d) {
+      MyRecords = MyRecords.filter(r => r.id !== d.dataset.recDel);
+      saveRecords(); UI.renderRecordOut(); Sfx.play('click'); return;
+    }
+    if (e.target.closest('#recCopy')) {
+      const all = recTally(MyRecords);
+      const lines = [`【Gunsmoke Arcana 戦績】 ${all.n}戦 ${all.win}勝${all.lose}敗${all.draw ? all.draw + '分' : ''}` +
+        `${all.pct == null ? '' : ' ' + all.pct + '%'}`];
+      MATCHUP_CLASSES.forEach(a2 => {
+        const row = MATCHUP_CLASSES.map(b2 => {
+          const t = recTally(MyRecords.filter(r => r.meCls === a2 && r.oppCls === b2));
+          return t.n ? `${CLASSES[b2].name} ${t.win}-${t.lose}${t.draw ? '-' + t.draw : ''}` : null;
+        }).filter(Boolean);
+        if (row.length) lines.push(`${CLASSES[a2].name} → ${row.join(' / ')}`);
+      });
+      const okc = await copyText(lines.join('\n'));
+      UI.toast(okc ? '戦績をコピーした' : 'コピーできなかった');
+      return;
+    }
+    if (e.target.closest('#recClear')) {
+      if (!confirm(`記録${MyRecords.length}件を全て消す。元に戻せないが、よいか。`)) return;
+      MyRecords = []; saveRecords(); UI.renderRecord(); UI.toast('全て消した');
+    }
+  });
+
   $('#matchRun').addEventListener('click', async () => {
     if (MatchupBusy) return;
     MatchupBusy = true; MatchupTable = null;
@@ -15619,6 +15914,22 @@ function initEvents() {
   });
   $('#ovResult').addEventListener('click', e => {
     const b = e.target.closest('[data-res]'); if (!b) return;
+    /* 今の試合をそのまま戦績に足す。画面は閉じず、二度押しても増えないようにする */
+    if (b.dataset.res === 'record') {
+      if (!G) return;
+      if (G._recorded) { UI.toast('この試合はもう記録してある'); return; }
+      const meIdx = viewIdx(), me = G.players[meIdx], opp = G.players[1 - meIdx];
+      addRecord({
+        meCls: me.cls, meDeck: me.deckName || '', oppCls: opp.cls, oppDeck: opp.deckName || '',
+        first: me.isFirst ? 'me' : 'opp',
+        result: G.winner === -1 ? 'draw' : (G.winner === meIdx ? 'win' : 'lose'),
+        turns: G.globalTurn || null, note: ''
+      });
+      G._recorded = true;
+      b.disabled = true; b.textContent = '記録した';
+      Sfx.play('card'); UI.toast(`戦績に残した（通算${MyRecords.length}戦）`);
+      return;
+    }
     $('#ovResult').hidden = true;
     if (b.dataset.res === 'again') beginMatch(G ? G.mode : 'pvp'); else UI.go('home');
   });
