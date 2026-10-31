@@ -796,7 +796,8 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 }
 .deckgrid .gcell.has{border-color:var(--brass-d); background:#2A2016}
 .deckgrid .gcard{position:relative; display:block; padding:0; background:none; border:0}
-.deckgrid .gcard .gn{                         /* 入っている枚数。札の右上に大きく出す */
+.entry .mini{position:relative}
+.deckgrid .gcard .gn, .entry .mini .gn{       /* 入っている枚数。札の右上に大きく出す */
   position:absolute; right:-3px; top:-4px; z-index:20;   /* 札の外枠（z-index 6〜7）より前に出す */ min-width:19px; height:19px; padding:0 4px;
   border-radius:10px; display:grid; place-items:center;
   font-family:var(--f-num); font-weight:600; font-size:12px; line-height:1;
@@ -804,6 +805,9 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   box-shadow:0 1px 4px rgba(0,0,0,.6);
 }
 .deckgrid .gcell:not(.has) .gcard .gn{display:none}
+.entry .stepper{gap:5px}
+.entry .stepper .btn{min-width:42px}
+.entry .stepper .btn[disabled]{opacity:.3}
 .deckgrid .gcell{width:var(--cw)}
 .deckgrid .gstep{display:flex; align-items:center; justify-content:center; gap:1px; width:100%}
 .deckgrid .gstep .btn{padding:1px 0; min-width:0; flex:1; font-size:11px; line-height:1.3}
@@ -815,12 +819,19 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   border-radius:0 3px 3px 0; padding:6px 10px; margin-bottom:2px;
 }
 .deckgrid .glabel{grid-column:1/-1; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass); border-top:1px solid var(--edge); padding-top:8px; margin-top:2px}
-.entry{display:flex; align-items:center; gap:10px; padding:6px 8px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
-.entry .mini{--cw:34px}
+.entry{display:flex; align-items:flex-start; gap:10px; padding:8px 9px; background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r)}
+.entry .mini{--cw:46px; flex:none}
 .entry .info{flex:1; min-width:0}
 .entry.has{border-color:var(--brass-d); background:#2A2016}
 .entry .info b{font-size:13px; font-weight:600}
 .entry .info s{display:block; text-decoration:none; font-size:10.5px; color:var(--mute); font-family:var(--f-type); letter-spacing:.05em}
+.entry .etext{
+  margin-top:4px; font-size:11.5px; line-height:1.75; color:var(--paper);
+  white-space:pre-wrap; word-break:break-word;
+  border-left:2px solid var(--brass-d); padding-left:8px;
+}
+.entry .etext.none{color:var(--faint); border-left-color:var(--edge)}
+.entry .stepper{flex:none; align-self:center}
 .stepper{display:flex; align-items:center; gap:6px}
 .stepper .n{font-family:var(--f-num); font-size:16px; min-width:26px; text-align:center; color:var(--brass-l)}
 .cardgrid{display:grid; gap:10px; grid-template-columns:repeat(auto-fill,minmax(96px,1fr)); margin-top:12px; --cw:clamp(76px,16vh,104px)}
@@ -12859,7 +12870,7 @@ let showNeutralPool = store.get('showNeutralPool', true);   // 候補一覧に�
 let DeckViewMode = store.get('deckViewMode', 'grid');      // 候補一覧の表示：'grid'（横5枚）／'list'（横1枚ずつ）
 let DeckOnlyIn = false;                                    // デッキに入っている札だけを出すか（画面を開くたび解除）
 let DeckSortMode = store.get('deckSortMode', 'ver');       // 候補一覧の並び順：'ver'（ver優先）／'cost'（コスト優先）
-const DECK_VIEWS = [['grid', '並べる'], ['list', '詳しく見る']];
+const DECK_VIEWS = [['grid', '並べる'], ['list', '効果を読む']];
 const DECK_SORTS = [['ver', 'ver → コスト'], ['cost', 'コスト → ver']];
 /* カードの並び替え。ver優先／コスト優先を切り替える（どちらも最後は名前順） */
 function cardSortBy(mode) {
@@ -13285,7 +13296,7 @@ const UI = {
     if (DeckViewMode === 'grid') {
       /* グリッド表示：横に5枚並べて下に続く。並び順の先頭のまとまりごとに見出しを入れる */
       list.appendChild(el('div', 'ghint',
-        '札を押すと1枚入る。効果の文を読むときは「詳しく見る」に切り替えて札を押す。'));
+        '札を押すと1枚入る。効果の文を読みながら足し引きするときは「効果を読む」に切り替える。'));
       let lastGroup = null;
       pool.forEach(c => {
         const group = groupLabelFor(c, DeckSortMode);
@@ -13318,12 +13329,17 @@ const UI = {
       const mini = el('div', 'mini');
       mini.appendChild(this.staticCard(c.id));
       row.appendChild(mini);
+      if (n > 0) mini.appendChild(el('span', 'gn tnum', String(n)));   // 入っている枚数は札の右上に
+      const kw = (c.keywords || []).filter(k => KEYWORDS[k]).map(k => KEYWORDS[k].name).join('・');
       row.appendChild(el('div', 'info',
         `<b>${esc(c.name)}</b><s>${CLASSES[c.cls].kana} &middot; ${TYPES[c.type].name} &middot; COST ${c.cost}` +
         (c.type === 'follower' ? ` &middot; ${c.attack}/${c.defense}` : '') +
-        ` &middot; ${RARITIES[c.rarity].name} &middot; ${verLabel(c.ver)}</s>`));
+        (kw ? ` &middot; ${kw}` : '') +
+        ` &middot; ${RARITIES[c.rarity].name} &middot; ${verLabel(c.ver)}</s>` +
+        `<div class="etext${c.text ? '' : ' none'}">${c.text ? esc(c.text) : '能力なし'}</div>`));
       const st = el('div', 'stepper');
-      st.innerHTML = `<button class="btn sm" data-dec="${c.id}">&minus;</button><span class="n tnum">${n}</span><button class="btn sm" data-inc="${c.id}">+</button>`;
+      st.innerHTML = `<button class="btn sm" data-dec="${c.id}" aria-label="${esc(c.name)} を1枚減らす"${n ? '' : ' disabled'}>&minus;</button>` +
+                     `<button class="btn sm" data-inc="${c.id}" aria-label="${esc(c.name)} を1枚増やす">＋</button>`;
       row.appendChild(st);
       list.appendChild(row);
     });

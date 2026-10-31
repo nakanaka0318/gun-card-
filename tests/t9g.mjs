@@ -129,7 +129,39 @@ const phone = () => b.newContext({ viewport: { width: 390, height: 844 }, device
     DeckViewMode = 'grid'; UI.renderDeck();
     return { hasInc, open };
   });
-  ok('「詳しく見る」では札を押すと効果の文が開く', detail.open && detail.hasInc === false, JSON.stringify(detail));
+  ok('「効果を読む」では札を押すと詳しい説明も開く', detail.open && detail.hasInc === false, JSON.stringify(detail));
+
+  /* 「効果を読む」は、札を足し引きしながら効果の全文が読める表示になっているか */
+  const read = await pg.evaluate(async () => {
+    DeckViewMode = 'list'; UI.renderDeck();
+    await new Promise(r => setTimeout(r, 250));
+    const rows = [...document.querySelectorAll('#deckList .entry')];
+    const texts = rows.map(r => { const e = r.querySelector('.etext'); return e ? e.textContent.trim() : null; });
+    const hasStep = rows.every(r => r.querySelector('[data-inc]') && r.querySelector('[data-dec]'));
+    const clipped = rows.filter(r => { const e = r.querySelector('.etext');
+      return e && e.scrollHeight - e.clientHeight > 2; }).length;
+    const over = rows.filter(r => r.getBoundingClientRect().right > innerWidth + 1).length;
+    /* 入っている札は札の右上に枚数が出る */
+    const inDeck = rows.filter(r => r.classList.contains('has'));
+    const badges = inDeck.map(r => { const g = r.querySelector('.mini .gn'); return g ? g.textContent : null; });
+    /* 0枚の札は「1枚減らす」を押せないようにしてある */
+    const zeroDisabled = rows.filter(r => !r.classList.contains('has'))
+      .every(r => r.querySelector('[data-dec]').disabled);
+    const tiny = [...document.querySelectorAll('#deckList .stepper .btn')]
+      .filter(n => { const b = n.getBoundingClientRect(); return b.height < 36 || b.width < 36; }).length;
+    DeckViewMode = 'grid'; UI.renderDeck();
+    return { rows: rows.length, withText: texts.filter(t => t && t.length > 0).length,
+             sample: texts.find(t => t && t.indexOf('ラストワード') >= 0) || texts[1],
+             hasStep, clipped, over, badges, zeroDisabled, tiny };
+  });
+  ok('「効果を読む」で全ての札に効果の文が出る',
+     read.rows > 50 && read.withText === read.rows, JSON.stringify({ rows: read.rows, withText: read.withText }));
+  ok('効果の文が途中で切れていない', read.clipped === 0 && read.over === 0, JSON.stringify(read));
+  ok('効果を読みながらその場で足し引きできる', read.hasStep && read.tiny === 0, JSON.stringify({ hasStep: read.hasStep, tiny: read.tiny }));
+  ok('入っている札は札の右上に枚数が出る',
+     read.badges.length > 0 && read.badges.every(x => x && +x > 0), JSON.stringify(read.badges));
+  ok('0枚の札は減らすボタンを押せない', read.zeroDisabled, String(read.zeroDisabled));
+
   /* 押し方の案内が候補の先頭に出ている */
   const hint = await pg.evaluate(() => {
     const h = document.querySelector('#deckList .ghint');
