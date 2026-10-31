@@ -44,17 +44,19 @@ const A = await pg.evaluate(() => {
   const deadRef = refIds.filter(r => !CARD_BY_ID[r.split('>')[1]]);
   return {
     n: v9.length, ids,
-    byCls: ['neutral', 'formation', 'accel'].map(k => v9.filter(c => c.cls === k).length),
-    otherCls: v9.filter(c => ['neutral', 'formation', 'accel'].indexOf(c.cls) < 0).map(c => c.id),
+    byCls: ['neutral', 'formation', 'accel', 'dominion', 'arcana', 'machina']
+      .map(k => v9.filter(c => c.cls === k && !c.token).length),
+    otherCls: v9.filter(c => ['neutral', 'formation', 'accel', 'dominion', 'arcana', 'machina'].indexOf(c.cls) < 0).map(c => c.id),
     badIds, badEff: [...new Set(badEff)], badBadge: [...new Set(badBadge)], badKw, badArt, badCls, badTribe, badText, deadRef,
     versions: VERSIONS.join(','), verLabel9: verLabel(9),
     dupIds: ids.filter((x, i) => ids.indexOf(x) !== i),
     tribeNotNone: v9.filter(c => c.tribe && c.tribe !== 'none').map(c => c.id + ':' + c.tribe),
-    tokens: v9.filter(c => c.token).map(c => c.id)
+    tokens: v9.filter(c => c.token).map(c => c.id),
+    tokenNames: v9.filter(c => c.token).map(c => c.name)
   };
 });
-ok('ver9 のカードが24枚ある', A.n === 24, String(A.n));
-ok('エニグマ8・フォーメーション8・アクセル8', A.byCls.join(',') === '8,8,8', A.byCls.join(',') + ' / 他クラス:' + A.otherCls.join(','));
+ok('ver9 のカードが50枚ある（6クラス×8枚＋トークン2枚）', A.n === 50, String(A.n));
+ok('6クラスとも8枚ずつある', A.byCls.join(',') === '8,8,8,8,8,8', A.byCls.join(',') + ' / 他クラス:' + A.otherCls.join(','));
 ok('IDの重複がない', A.dupIds.length === 0, A.dupIds.join(','));
 ok('全カードが索引に載っている', A.badIds.length === 0, A.badIds.join(','));
 ok('効果の種類とフックが全て実在する', A.badEff.length === 0, A.badEff.join(' | '));
@@ -67,23 +69,29 @@ ok('参照カードIDが全て実在する', A.deadRef.length === 0, A.deadRef.j
 ok('説明文とフレーバーが全カードにある', A.badText.length === 0, A.badText.join(','));
 ok('VERSIONS に 9 が入っている', A.versions === '1,2,3,4,5,6,7,8,9' && A.verLabel9 === 'ver9', A.versions);
 /* 指定のない種族・トークンは付けない（取り決め） */
-ok('タイプ行にない種族を付けていない', A.tribeNotNone.length === 0, A.tribeNotNone.join(','));
-ok('指定のないトークン扱いをしていない', A.tokens.length === 0, A.tokens.join(','));
+ok('種族はマキナの機械だけ（他は指定が無いので付けない）',
+   A.tribeNotNone.every(x => x.indexOf(':machine') >= 0), A.tribeNotNone.join(','));
+ok('トークンは指定された「株」「億り人」だけ',
+   A.tokens.length === 2 && A.tokenNames.sort().join(',') === ['億り人', '株'].sort().join(','), A.tokenNames.join(','));
 
 /* ---------- [B] 用語集の網羅 ---------- */
 const Bx = await pg.evaluate(() => ({
-  growthKw: !!KEYWORDS.growth, enhanceGone: !KEYWORDS.enhance,
+  growthKw: !!KEYWORDS.growth, resonanceKw: !!KEYWORDS.resonance, enhanceGone: !KEYWORDS.enhance,
   enhanceCards: CARDS.filter(c => c.enhance).map(c => c.name),
   deckDiscarded: !!ABILITY_TERMS.deckDiscarded,
-  rudeman: !!BADGES.rudeman, voidend: !!BADGES.voidend,
-  badgeDesc: [BADGES.rudeman, BADGES.voidend].every(x => x && x.name && x.desc && x.kana && x.glyph)
+  badges: ['rudeman', 'voidend', 'screamright', 'loveright', 'restwarrior', 'restprayer',
+           'despairform', 'maddance', 'eternalres'].filter(k => BADGES[k]).length,
+  badgeDesc: ['rudeman', 'voidend', 'screamright', 'loveright', 'restwarrior', 'restprayer',
+              'despairform', 'maddance', 'eternalres']
+    .every(k => BADGES[k] && BADGES[k].name && BADGES[k].desc && BADGES[k].kana && BADGES[k].glyph)
 }));
 ok('キーワード「成長」が用語集にある', Bx.growthKw, '');
+ok('キーワード「共鳴」が用語集にある', Bx.resonanceKw, '');
 /* エンハンスは仕様の書き間違いだった。どのカードも使っていないので、用語集にも残さない */
 ok('使われていないエンハンスが用語集に残っていない',
    Bx.enhanceGone && Bx.enhanceCards.length === 0, Bx.enhanceCards.join(','));
 ok('「山札で捨てられた時」が用語集にある', Bx.deckDiscarded, '');
-ok('バッジ2種が登録され説明も揃っている', Bx.rudeman && Bx.voidend && Bx.badgeDesc, JSON.stringify(Bx));
+ok('ver9 のバッジ9種が登録され説明も揃っている', Bx.badges === 9 && Bx.badgeDesc, JSON.stringify(Bx));
 
 /* ---------- [C] PPの増え方 ---------- */
 const PP = await pg.evaluate(() => {

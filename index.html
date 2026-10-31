@@ -667,6 +667,7 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   color:#0E2A1E; background:linear-gradient(#9AD8C0,#4E9276); border:1px solid #1E5A40;
   box-shadow:0 0 6px rgba(120,210,170,.55);
 }
+.card .c-fu.stack{top:calc(var(--cw)*.56)}   /* X（購入値）と重ならないよう一段下げる */
 .actbtn.fusion{background:linear-gradient(#4E9276,#215038); border-color:#9AD8C0}
 .choices{display:flex; gap:12px; justify-content:center; flex-wrap:wrap; --cw:clamp(72px,16vh,104px)}
 .choicebtn{
@@ -1751,6 +1752,7 @@ const KEYWORDS = {
   bane:       { name: '必殺',   glyph: '必', desc: 'ステータスに関係なく、このフォロワーと戦闘したフォロワーを破壊する（自分が攻撃した時・相手に攻撃された時のどちらでも発動する）。' },
   growth:     { name: '成長',   glyph: '成', desc: '自分のPPがX以上のとき、このカードのコストはXになり「成長効果」を得る。PPがX未満なら元のコストのまま。成長が複数段あるカードは、払えるうちで一番高い段が適用され、それ以下の段の効果も全て働く。' },
   okugi:      { name: '奥義',   glyph: '奥', desc: '奥義X ＝「自分のターン数」＋「このカードが手札にある間にフォロワーが進化した回数」。その値が X 以上のときにプレイすると、奥義の効果が働く。奥義が複数段あるカードは、条件を満たした段の効果が全て働く。効果の書き方がない奥義はファンファーレとして働く。手札のカードの左上に現在の奥義値が出る。' },
+  resonance:  { name: '共鳴',   glyph: '共', desc: '共鳴 ＝ 自分の山札の枚数が偶数のとき、共鳴の効果が働く。0枚も偶数として扱う。山札の枚数は画面上部の DECK に出ているので、引く・捨てるで偶数奇数を操れる。' },
   fusion:     { name: '融合',   glyph: '融', desc: '融合は手札で行う。このカードが手札にある間、画面下の「融合」ボタンから、条件に合う自分の手札を選んで融合できる（融合先が複数あるときは先にどのカードに融合させるか選ぶ）。選んだ手札は1枚でも複数枚でもよく、融合すると全て消滅して、このカードの融合した枚数・種類が増える。増えた枚数・種類を条件にした効果はカードごとに異なる（そのまま手札で姿を変えるものもある）。融合しただけでは場には出ないので、融合を済ませたカードは改めて手札からプレイする。カードの左上に、今まで融合した種類の数が出る。' }
 };
 /* 能力の発動タイミング（カードテキストの語） */
@@ -1810,6 +1812,45 @@ const MECHANIC_TERMS = {
 /* バッジ: プレイヤーが保持する持続効果。同じバッジは重複して持たない。 */
 const BADGES = {
   /* ---- ver9 追加分 ---- */
+  screamright: {
+    id: 'screamright', name: '絶叫の権限', kana: 'SCREAM RIGHT', glyph: '&#9888;', permanent: true,
+    desc: '永続。自分のターン終了時、「絶叫の顕現・ルルナイ」を1枚手札に加える。',
+    effects: [{ hook: 'turnEnd', type: 'addToHand', params: { cardId: 'lulunai_001', count: 1 } }]
+  },
+  loveright: {
+    id: 'loveright', name: '愛絶の権限', kana: 'LOVE RIGHT', glyph: '&#10084;', permanent: true,
+    desc: '永続。自分のターン終了時、「愛絶の顕現・ヴァーナレク」を1枚手札に加える。',
+    effects: [{ hook: 'turnEnd', type: 'addToHand', params: { cardId: 'varnalek_001', count: 1 } }]
+  },
+  restwarrior: {
+    id: 'restwarrior', name: '安息の武者', kana: 'RESTING WARRIOR', glyph: '&#9961;', duration: 4,
+    desc: '4ターン持続。自分のターン終了時、そのターン自分のフォロワーが1体も攻撃していなければ、自分のリーダーの体力を2回復する。',
+    effects: [{ hook: 'turnEnd', cond: { noAttackThisTurn: true },
+                type: 'heal', params: { target: 'ownLeader', amount: 2 } }]
+  },
+  restprayer: {
+    id: 'restprayer', name: '安息の祈祷者', kana: 'RESTING PRAYER', glyph: '&#9775;', duration: 4,
+    desc: '4ターン持続。自分のターン終了時、そのターン自分のフォロワーが1体も攻撃していなければ、体力が4のフォロワーを1枚引く。',
+    effects: [{ hook: 'turnEnd', cond: { noAttackThisTurn: true },
+                type: 'drawFiltered', params: { cardType: 'follower', exactDefense: 4 } }]
+  },
+  despairform: {
+    id: 'despairform', name: '絶望の顕現', kana: 'DESPAIR FORM', glyph: '&#9763;', permanent: true,
+    desc: '永続。自分のターン終了時、そのターン自分のフォロワーが1体も攻撃していなければ、相手のフォロワーとリーダーからランダムな1体に1ダメージをX回与える。Xは自分のバッジの数。',
+    effects: [{ hook: 'turnEnd', cond: { noAttackThisTurn: true },
+                type: 'damageByBadgeCount', params: { target: 'randomEnemyAny', amount: 1 } }]
+  },
+  eternalres: {
+    id: 'eternalres', name: '絶尽の共鳴', kana: 'ETERNAL RESONANCE', glyph: '&#9842;', permanent: true,
+    desc: '永続。自分のターン開始時、自分の山札が偶数（共鳴している）なら、相手のフォロワー全てに2ダメージを与える。',
+    effects: [{ hook: 'turnStart', cond: { resonance: true },
+                type: 'damage', params: { target: 'enemyFollowers', amount: 2 } }]
+  },
+  maddance: {
+    id: 'maddance', name: '狂いの踊り', kana: 'MAD DANCE', glyph: '&#9834;', duration: 2,
+    desc: '2ターン持続。持続が切れて失われたとき、自分のリーダーに10ダメージを与える。',
+    effects: [{ hook: 'badgeExpire', type: 'damage', params: { target: 'ownLeader', amount: 10 } }]
+  },
   rudeman: {
     id: 'rudeman', name: 'ルードマン', kana: 'RUDE MAN', glyph: '&#9876;', permanent: true,
     desc: '永続。自分のターン終了時、自分の場に超進化フォロワーがいるなら、相手のフォロワー全てに2ダメージを与える。',
@@ -2912,6 +2953,139 @@ registerEffect('repeatByDeckGap', async (ctx, p) => {
   pushLog(`山札は ${P.deck.length} 枚 → ${times} 回繰り返す`);
   for (let i = 0; i < times; i++) await runSubEffects(ctx, p.each);
 });
+/* ---- 財布（ドミニオンの軸）----
+   手札の「財布」に融合すると購入値（インスタンスの x）が増え、
+   プレイ時に購入値を払って品物を引き替える。払っても財布は手札に残る。 */
+const WALLET_ID = 'wallet_001';
+const WALLET_GAIN = { legend: 4, gold: 3, silver: 2, bronze: 1, basic: 1 };
+function walletsIn(pIdx) { return G.players[pIdx].hand.filter(c => c.cardId === WALLET_ID); }
+/* いちばん購入値の高い財布を返す（増やす・減らす対象はこれにそろえる） */
+function bestWallet(pIdx) {
+  const list = walletsIn(pIdx);
+  if (!list.length) return null;
+  return list.reduce((a, b) => ((b.x || 0) > (a.x || 0) ? b : a));
+}
+function addBuyValue(pIdx, amount) {
+  const w = bestWallet(pIdx);
+  if (!w) { pushLog('手札に「財布」が無く、購入値は増えない'); return 0; }
+  w.x = (w.x || 0) + amount;
+  pushLog(`財布の購入値が +${amount}（現在 ${w.x}）`);
+  refreshCounters(pIdx); UI.renderBattle();
+  return amount;
+}
+/* 融合した素材のレアリティぶん購入値を増やす */
+registerEffect('walletGain', (ctx, p) => {
+  const host = ctx.source; if (!host) return;
+  const ids = (p.fusedIds && p.fusedIds.length) ? p.fusedIds : ((ctx.extra && ctx.extra.fusedIds) || []);
+  let add = 0;
+  (ids.length ? ids : []).forEach(id => {
+    const d = CARD_BY_ID[id]; if (d) add += (WALLET_GAIN[d.rarity] || 1);
+  });
+  if (!add) return;
+  host.x = (host.x || 0) + add;
+  pushLog(`${host.name} の購入値が +${add}（現在 ${host.x}）`);
+  refreshCounters(ctx.owner); UI.renderBattle();
+});
+/* 購入値を増やす（他のカードから） */
+registerEffect('buyValueAdd', (ctx, p) => { addBuyValue(ctx.owner, p.amount || 1); });
+/* 購入値を払えたら続く効果が働く（払えなければ何も起きない） */
+registerEffect('buyValueSpend', async (ctx, p) => {
+  const w = bestWallet(ctx.owner);
+  const need = p.amount || 1;
+  if (!w || (w.x || 0) < need) { pushLog(`購入値が ${need} に足りず、何も起きない`); return; }
+  w.x -= need;
+  pushLog(`購入値を ${need} 使った（残り ${w.x}）`);
+  refreshCounters(ctx.owner); UI.renderBattle();
+  await runSubEffects(ctx, p.then);
+});
+/* 組んだ40枚の構成から、指定レアリティのカードを1枚手札に加える（財布そのものは除く） */
+registerEffect('addFromDeckList', (ctx, p) => {
+  const P = G.players[ctx.owner];
+  const pool = (P.srcIds || []).filter(id => {
+    const d = CARD_BY_ID[id];
+    return d && id !== WALLET_ID && (d.rarity || 'basic') === p.rarity;
+  });
+  if (!pool.length) { pushLog(`デッキの構成に${RARITIES[p.rarity] ? RARITIES[p.rarity].name : p.rarity}のカードが無い`); return; }
+  const id = pool[Math.floor(Math.random() * pool.length)];
+  const c = makeInstance(id, ctx.owner);
+  if (p.costMod) c.costMod = (c.costMod || 0) + p.costMod;
+  if (P.hand.length >= RULES.handMax) { P.grave.push(c); pushLog(`手札が上限。${c.name} は墓場へ`); return; }
+  P.hand.push(c);
+  pushLog(`デッキの構成から ${c.name} を手札に加えた（コスト${costOf(c)}）`);
+  FX.fly(c.cardId, handSelFor(P.idx), '買った', 'rgba(240,200,120,.85)');
+  refreshCounters(ctx.owner); UI.renderBattle();
+});
+/* プレイしても手札に残る（同じ購入値の財布がまた手に入る） */
+registerEffect('keepSelfInHand', (ctx, p) => {
+  const P = G.players[ctx.owner], src = ctx.source;
+  if (!src) return;
+  const c = makeInstance(src.cardId, ctx.owner);
+  c.x = src.x || 0;
+  if (P.hand.length >= RULES.handMax) { pushLog(`手札が上限。${c.name} は戻らない`); return; }
+  P.hand.push(c);
+  pushLog(`${c.name} は手札に残った（購入値 ${c.x}）`);
+  refreshCounters(ctx.owner); UI.renderBattle();
+});
+/* 山札（デッキ）で働く：ターン数が指定なら、このカードを1枚引き、残りは捨てる */
+registerEffect('deckDrawSelfOnce', async (ctx, p) => {
+  const P = G.players[ctx.owner];
+  if (P.turnCount !== (p.turn || 1)) return;
+  const same = P.deck.filter(c => c.cardId === ctx.source.cardId);
+  if (!same.length) return;
+  const keep = same[0];
+  for (const c of same.slice(1)) await discardFromDeck(ctx.owner, c);   // 1枚になるように捨てる
+  const i = P.deck.findIndex(c => c.uid === keep.uid);
+  if (i >= 0) P.deck.splice(i, 1);
+  if (P.hand.length >= RULES.handMax) { P.grave.push(keep); pushLog(`手札が上限。${keep.name} は墓場へ`); }
+  else { P.hand.push(keep); pushLog(`${keep.name} を山札から手札に加えた`); }
+  refreshCounters(ctx.owner); UI.renderBattle();
+});
+/* 相手の体力がいちばん高いフォロワーを破壊する */
+registerEffect('destroyHighestHp', (ctx, p) => {
+  const E = G.players[1 - ctx.owner];
+  const pool = E.board.filter(f => f.type === 'follower' && !f.destroyed);
+  if (!pool.length) { pushLog('相手の場にフォロワーがいない'); return; }
+  const top = pool.reduce((a, b) => (b.hp > a.hp ? b : a));
+  pushLog(`体力が最も高い ${top.name}（体力${top.hp}）を破壊`);
+  destroyByEffect(top);
+});
+/* そのバトルで場に出た「このカード」の枚数ぶん、自分を場に出す */
+registerEffect('summonSelfByEntered', async (ctx, p) => {
+  const P = G.players[ctx.owner], id = ctx.source.cardId;
+  /* 場に出た数の記録はファンファーレのあとで増えるので、出したばかりの自分を足して数える */
+  const n = ((P.cardEnterCounts || {})[id] || 0) + 1;
+  pushLog(`${CARD_BY_ID[id].name} はこれまでに ${n} 体 場に出ている`);
+  for (let i = 0; i < n; i++) {
+    if (P.board.length >= RULES.boardMax) { pushLog('場が満杯で、これ以上は出せない'); break; }
+    await summonCard(ctx.owner, id);
+  }
+  if (n >= (p.bonusAt || 6)) {
+    pushLog(`${p.bonusAt || 6} 体以上なので、追加の効果が働く`);
+    await runSubEffects(ctx, p.then);
+  }
+});
+/* 自分と同じカードを1枚手札に加える */
+registerEffect('addSelfToHand', (ctx, p) => {
+  const fn = EFFECTS.addToHand;
+  fn(ctx, { cardId: ctx.source.cardId, count: p.count || 1 });
+});
+/* 自分のバッジの数ぶん、相手のフォロワーかリーダーにランダムで1ダメージ */
+registerEffect('damageByBadgeCount', (ctx, p) => {
+  const P = G.players[ctx.owner];
+  const n = (P.badges || []).length;
+  if (!n) { pushLog('バッジを持っていないため不発'); return; }
+  pushLog(`バッジ ${n} 個ぶん、ランダムに ${p.amount || 1} ダメージ`);
+  for (let i = 0; i < n; i++) {
+    ctx.pick(p.target || 'randomEnemyAny', p).forEach(t => dealDamage(t, p.amount || 1, ctx.source));
+  }
+});
+/* あまっているPPの数ぶん、同じ効果を繰り返す */
+registerEffect('repeatByLeftoverPP', async (ctx, p) => {
+  const P = G.players[ctx.owner], n = P.pp;
+  if (!n) { pushLog('PPがあまっていないため不発'); return; }
+  pushLog(`あまったPP ${n} 回ぶん繰り返す`);
+  for (let i = 0; i < n; i++) await runSubEffects(ctx, p.each);
+});
 /* 超進化ポイント（SEP）を回復する */
 registerEffect('restoreSEP', (ctx, p) => {
   const P = G.players[ctx.owner];
@@ -3760,6 +3934,35 @@ const SHAPES = {
   dullardent: `<g fill="#3A3A42"><path d="M50 34 c15 0 22 13 22 30l3 22H25l3-22c0-17 7-30 22-30Z"/><path d="M38 26 a12 12 0 0 1 24 0 v6H38Z"/></g><rect x="38" y="30" width="24" height="3" fill="#8B96A2"/><g fill="#F3E6C8"><circle cx="45" cy="28" r="1.7"/><circle cx="55" cy="28" r="1.7"/></g><path d="M50 48 l18 7v12q0 11-18 16 q-18-5-18-16V55Z" fill="#6B7280"/><path d="M50 54 v26" stroke="#EDE3C8" stroke-width="2.2"/><path d="M40 64 h20" stroke="#EDE3C8" stroke-width="2.2"/>`,
   ryufu: `<g fill="#241608"><ellipse cx="38" cy="72" rx="13" ry="15"/><circle cx="38" cy="44" r="11"/></g><g fill="#F3E0B0"><circle cx="34" cy="43" r="1.8"/><circle cx="42" cy="43" r="1.8"/></g><path d="M86 18 q-22 10-22 34 q0 20 14 32" stroke="#C99A42" stroke-width="4" fill="none"/><path d="M86 18 l-10 66" stroke="#8A6424" stroke-width="3" fill="none"/><g stroke="#FFE9B4" stroke-width="1.6"><path d="M80 26 l-4 50"/><path d="M74 32 l2 42"/><path d="M69 42 l6 30"/><path d="M66 54 l8 18"/></g><path d="M16 38 q14 6 0 12" stroke="#9AD8C0" stroke-width="2.4" fill="none" opacity=".9"/><path d="M14 56 q18 6 0 12" stroke="#9AD8C0" stroke-width="2.4" fill="none" opacity=".7"/>`,
   yube: `<path d="M10 70 q14-12 26 0 q14-12 28 0 q12-10 26 0 v16H10Z" fill="#2E5A6B" opacity=".9"/><g fill="#E8A8C0"><circle cx="50" cy="40" r="7"/><circle cx="38" cy="46" r="6"/><circle cx="62" cy="46" r="6"/><circle cx="44" cy="31" r="5.4"/><circle cx="57" cy="31" r="5.4"/></g><circle cx="50" cy="39" r="3.4" fill="#F0DCA6"/><path d="M50 48 q-4 14 2 22" stroke="#4E8C7A" stroke-width="2.2" fill="none"/><circle cx="24" cy="36" r="2.6" fill="#9AD8E4" opacity=".8"/><circle cx="78" cy="30" r="2.2" fill="#9AD8E4" opacity=".7"/>`,
+  /* ---- ver9 ドミニオン ---- */
+  wallet: `<path d="M18 38 h58 a6 6 0 0 1 6 6 v30 a6 6 0 0 1-6 6H18a6 6 0 0 1-6-6V44a6 6 0 0 1 6-6Z" fill="#6B4A28"/><path d="M12 48 h70 v8H12Z" fill="#8A5F34"/><path d="M58 52 h26 a4 4 0 0 1 4 4v10a4 4 0 0 1-4 4H58a6 6 0 0 1 0-18Z" fill="#4A3220"/><circle cx="64" cy="61" r="4.5" fill="#F0C878"/><path d="M24 30 q26-14 52 0 l-4 8 q-22-12-44 0Z" fill="#8A5F34" opacity=".85"/>`,
+  stock: `<path d="M14 80 h72" stroke="#6B5238" stroke-width="2"/><path d="M18 70 l14-16 12 10 16-26 14 12 10-18" stroke="#9AD8B4" stroke-width="3.5" fill="none"/><path d="M84 32 l-10 2 6 8Z" fill="#9AD8B4"/><g fill="#C9A05E" opacity=".9"><rect x="20" y="70" width="8" height="10"/><rect x="38" y="62" width="8" height="18"/><rect x="56" y="52" width="8" height="28"/><rect x="74" y="44" width="8" height="36"/></g>`,
+  okuribito: `<g fill="#1E1408"><path d="M50 32 c15 0 22 14 22 32l3 22H25l3-22c0-18 7-32 22-32Z"/><circle cx="50" cy="24" r="12"/></g><g fill="#F0C878"><circle cx="45" cy="23" r="2.2"/><circle cx="55" cy="23" r="2.2"/></g><path d="M30 46 h40 v10H30Z" fill="#C9A05E"/><g fill="#F0DCA6"><rect x="16" y="68" width="18" height="11" rx="1"/><rect x="66" y="68" width="18" height="11" rx="1"/><rect x="41" y="62" width="18" height="11" rx="1"/></g><path d="M50 10 l3 7h7l-6 5 3 8-7-5-7 5 3-8-6-5h7Z" fill="#F0C878"/>`,
+  troy: `<g fill="#241608"><ellipse cx="50" cy="70" rx="13" ry="16"/><circle cx="50" cy="42" r="11"/></g><g fill="#E8C182"><circle cx="46" cy="41" r="1.8"/><circle cx="54" cy="41" r="1.8"/></g><path d="M30 34 q20-14 40 0 l-3 5 q-17-11-34 0Z" fill="#7A5C3A"/><g fill="#8A7260" opacity=".8"><ellipse cx="24" cy="76" rx="9" ry="11"/><ellipse cx="76" cy="76" rx="9" ry="11"/></g>`,
+  goldwork: `<path d="M22 74 h56 l-6-14H28Z" fill="#8A5F34"/><g fill="#F0C878"><path d="M34 58 l6-10h20l6 10Z"/><path d="M28 48 l5-8h14l5 8Z"/><path d="M54 48 l5-8h14l5 8Z"/></g><g fill="#241608"><ellipse cx="50" cy="34" rx="9" ry="10"/></g><g fill="#E8C182"><circle cx="47" cy="33" r="1.6"/><circle cx="53" cy="33" r="1.6"/></g><path d="M14 78 h72" stroke="#6B5238" stroke-width="3"/>`,
+  merchant: `<g fill="#241608"><ellipse cx="44" cy="70" rx="13" ry="16"/><circle cx="44" cy="42" r="11"/></g><g fill="#E8C182"><circle cx="40" cy="41" r="1.8"/><circle cx="48" cy="41" r="1.8"/></g><path d="M26 32 q18-12 36 0 l-4 6 q-14-9-28 0Z" fill="#7A4A6A"/><path d="M66 46 l18 10v20l-18 10-4-2V48Z" fill="#8A6A3A"/><path d="M66 46 l18 10-18 10-4-4V48Z" fill="#C9A05E"/><circle cx="74" cy="62" r="3.5" fill="#F0DCA6"/>`,
+  mukan: `<g fill="#1A1424"><path d="M50 34 c13 0 19 13 19 30l3 22H28l3-22c0-17 6-30 19-30Z"/><circle cx="50" cy="26" r="11"/></g><path d="M34 22 q16-12 32 0 l-3 6 q-13-9-26 0Z" fill="#4E3568"/><g fill="#C7A5E4"><circle cx="45" cy="25" r="2"/><circle cx="55" cy="25" r="2"/></g><g fill="none" stroke="#8A66AE" stroke-width="2" opacity=".85"><circle cx="50" cy="58" r="16"/><circle cx="50" cy="58" r="24"/></g>`,
+  edelweiss: `<g fill="#241608"><ellipse cx="50" cy="72" rx="12" ry="15"/><circle cx="50" cy="44" r="10"/></g><g fill="#F3E0B0"><circle cx="46" cy="43" r="1.7"/><circle cx="54" cy="43" r="1.7"/></g><g fill="#EDE3C8"><ellipse cx="50" cy="20" rx="5" ry="9"/><ellipse cx="50" cy="20" rx="9" ry="5"/><ellipse cx="44" cy="15" rx="4" ry="7" transform="rotate(-40 44 15)"/><ellipse cx="56" cy="15" rx="4" ry="7" transform="rotate(40 56 15)"/></g><circle cx="50" cy="20" r="3" fill="#F0C878"/><path d="M24 60 q26 10 52 0" stroke="#C9A05E" stroke-width="2.4" fill="none"/>`,
+  lulunai: `<g fill="#2A0E14"><path d="M50 34 c12 0 18 12 18 30l3 22H29l3-22c0-18 6-30 18-30Z"/><circle cx="50" cy="26" r="11"/></g><path d="M42 30 q8 12 16 0 q-8 16-16 0Z" fill="#DC6A42"/><g fill="#F3C8A0"><circle cx="45" cy="23" r="2"/><circle cx="55" cy="23" r="2"/></g><g stroke="#C06A4C" stroke-width="2" fill="none" opacity=".8"><path d="M20 30 q-6 12 0 24"/><path d="M80 30 q6 12 0 24"/><path d="M12 24 q-8 18 0 36"/><path d="M88 24 q8 18 0 36"/></g>`,
+  varnalek: `<g fill="#1E1024"><ellipse cx="50" cy="70" rx="12" ry="15"/><circle cx="50" cy="42" r="10"/></g><g fill="#E6C2FA"><circle cx="46" cy="41" r="1.7"/><circle cx="54" cy="41" r="1.7"/></g><path d="M50 56 C34 44 28 34 36 28 c6-5 12 1 14 7 c2-6 8-12 14-7 c8 6 2 16-14 28Z" fill="#B0456A"/><g fill="#8A66AE" opacity=".85"><path d="M26 44 q-16 6-14 20 q12-4 16-12Z"/><path d="M74 44 q16 6 14 20 q-12-4-16-12Z"/></g>`,
+  /* ---- ver9 アルカナ ---- */
+  restwarrior: `<g fill="#241608"><path d="M50 36 c12 0 18 12 18 28l3 22H29l3-22c0-16 6-28 18-28Z"/><path d="M39 30 a11 11 0 0 1 22 0 v4H39Z"/></g><g fill="#F3E0B0"><circle cx="45" cy="30" r="1.7"/><circle cx="55" cy="30" r="1.7"/></g><path d="M50 48 l16 7v14q0 11-16 16 q-16-5-16-16V55Z" fill="#6B5A4A"/><path d="M50 54 v26" stroke="#EDE3C8" stroke-width="2.2"/><path d="M22 34 l8 44" stroke="#8A7260" stroke-width="2.6"/>`,
+  restprayer: `<g fill="#241608"><path d="M50 36 c12 0 18 12 18 28l3 22H29l3-22c0-16 6-28 18-28Z"/><circle cx="50" cy="28" r="11"/></g><g fill="#F3E0B0"><circle cx="46" cy="27" r="1.7"/><circle cx="54" cy="27" r="1.7"/></g><path d="M50 44 v30 M38 56 h24" stroke="#F0DCA6" stroke-width="3.4"/><circle cx="50" cy="14" r="7" fill="none" stroke="#F0C878" stroke-width="2.4"/><g fill="#EDE3C8" opacity=".55"><circle cx="30" cy="48" r="3"/><circle cx="70" cy="48" r="3"/></g>`,
+  ronavero: `<g fill="#1A1424"><path d="M50 36 c12 0 18 12 18 28l3 22H29l3-22c0-16 6-28 18-28Z"/><circle cx="50" cy="28" r="11"/></g><path d="M36 24 q14-12 28 0 l-3 6 q-11-9-22 0Z" fill="#4E3568"/><g fill="#C7A5E4"><circle cx="46" cy="27" r="1.9"/><circle cx="54" cy="27" r="1.9"/></g><path d="M50 48 l14 8-14 8-14-8Z" fill="#8A66AE"/><g fill="none" stroke="#D9C0EE" stroke-width="1.6" opacity=".85"><path d="M22 40 q28-14 56 0"/><path d="M22 72 q28 14 56 0"/></g>`,
+  marwin: `<g fill="#120E1A"><path d="M50 32 c14 0 21 13 21 32l3 22H26l3-22c0-19 7-32 21-32Z"/><circle cx="50" cy="24" r="12"/></g><g fill="#C06A4C"><circle cx="45" cy="23" r="2.4"/><circle cx="55" cy="23" r="2.4"/></g><path d="M40 34 q10 8 20 0 q-10 10-20 0Z" fill="#3A2A4A"/><g stroke="#6B4A92" stroke-width="2" fill="none" opacity=".8"><path d="M18 50 q10 16 0 30"/><path d="M82 50 q-10 16 0 30"/></g><circle cx="50" cy="60" r="7" fill="none" stroke="#C7A5E4" stroke-width="2"/>`,
+  saintflash: `<circle cx="50" cy="44" r="18" fill="#FFF6DC" opacity=".92"/><g stroke="#F0C878" stroke-width="3" stroke-linecap="round"><path d="M50 10 v12"/><path d="M50 66 v12"/><path d="M16 44 h12"/><path d="M72 44 h12"/><path d="M26 20 l8 8"/><path d="M74 20 l-8 8"/><path d="M26 68 l8-8"/><path d="M74 68 l-8-8"/></g><circle cx="50" cy="44" r="8" fill="#F0C878"/><path d="M10 84 q40-12 80 0" stroke="#8A6A33" stroke-width="2" fill="none"/>`,
+  maddance: `<g fill="#241608"><ellipse cx="50" cy="68" rx="11" ry="16" transform="rotate(-12 50 68)"/><circle cx="54" cy="38" r="10"/></g><g fill="#E8C182"><circle cx="51" cy="37" r="1.7"/><circle cx="58" cy="37" r="1.7"/></g><path d="M44 50 l-22 8 4 7 22-8Z" fill="#8A2A4A"/><path d="M62 50 l22-12 3 7-22 12Z" fill="#8A2A4A"/><g fill="#E08AA8"><circle cx="20" cy="26" r="4"/><circle cx="82" cy="22" r="3.4"/><circle cx="14" cy="60" r="3"/></g>`,
+  medalist: `<g fill="#241608"><path d="M50 38 c12 0 18 12 18 26l3 22H29l3-22c0-14 6-26 18-26Z"/><circle cx="50" cy="30" r="10"/></g><g fill="#F3E0B0"><circle cx="46" cy="29" r="1.6"/><circle cx="54" cy="29" r="1.6"/></g><g fill="#F0C878"><circle cx="38" cy="58" r="6"/><circle cx="50" cy="62" r="6"/><circle cx="62" cy="58" r="6"/></g><g fill="#AE4429"><path d="M34 48 h8 l-2 6h-4Z"/><path d="M46 50 h8 l-2 6h-4Z"/><path d="M58 48 h8 l-2 6h-4Z"/></g>`,
+  ara: `<g fill="#241608"><ellipse cx="50" cy="72" rx="12" ry="15"/><circle cx="50" cy="44" r="10"/></g><g fill="#F3E0B0"><circle cx="46" cy="43" r="1.7"/><circle cx="54" cy="43" r="1.7"/></g><g fill="#E8A8C0"><ellipse cx="50" cy="20" rx="6" ry="9"/><ellipse cx="41" cy="25" rx="5" ry="8" transform="rotate(-38 41 25)"/><ellipse cx="59" cy="25" rx="5" ry="8" transform="rotate(38 59 25)"/></g><circle cx="50" cy="22" r="3.4" fill="#F0DCA6"/><path d="M18 58 q32-16 64 0" stroke="#F0C878" stroke-width="2" fill="none" opacity=".8"/>`,
+  /* ---- ver9 マキナ ---- */
+  evenbolt: `<g fill="#3A3A42"><rect x="42" y="26" width="7" height="46" rx="3"/><rect x="51" y="26" width="7" height="46" rx="3"/></g><g fill="#8B96A2"><path d="M42 26 l3.5-10 3.5 10Z"/><path d="M51 26 l3.5-10 3.5 10Z"/></g><rect x="36" y="70" width="28" height="10" rx="2" fill="#5A6470"/><g fill="#9AD8E4"><circle cx="45.5" cy="46" r="3"/><circle cx="54.5" cy="46" r="3"/></g><path d="M20 84 h60" stroke="#6B5238" stroke-width="2"/>`,
+  tuningdoll: `<g fill="#3A3A42"><circle cx="50" cy="40" r="13"/><rect x="42" y="52" width="16" height="24" rx="3"/></g><g fill="none" stroke="#8B96A2" stroke-width="3"><circle cx="50" cy="40" r="19"/></g><g fill="#8B96A2"><rect x="47" y="18" width="6" height="7"/><rect x="47" y="55" width="6" height="7"/><rect x="27" y="37" width="7" height="6"/><rect x="66" y="37" width="7" height="6"/></g><g fill="#9AD8E4"><circle cx="45" cy="39" r="2.2"/><circle cx="55" cy="39" r="2.2"/></g>`,
+  twinbarrel: `<g fill="#3A3A42"><rect x="14" y="40" width="46" height="11" rx="5"/><rect x="14" y="55" width="46" height="11" rx="5"/></g><g fill="#1E242A"><circle cx="16" cy="45.5" r="4.5"/><circle cx="16" cy="60.5" r="4.5"/></g><path d="M60 34 h18 a8 8 0 0 1 8 8 v22 a8 8 0 0 1-8 8H60Z" fill="#5A6470"/><g fill="#9AD8E4"><circle cx="72" cy="46" r="3.4"/><circle cx="72" cy="60" r="3.4"/></g><path d="M12 80 h72" stroke="#6B5238" stroke-width="2"/>`,
+  parityforge: `<path d="M26 76 h48 l-6-30H32Z" fill="#4A4038"/><path d="M32 46 h36 l-4-12H36Z" fill="#6B5A4A"/><g fill="#DC6A42" opacity=".9"><path d="M42 70 q4-12 8 0 q4-12 8 0 q-8 8-16 0Z"/></g><g fill="#8B96A2"><circle cx="30" cy="26" r="7"/><circle cx="70" cy="26" r="7"/></g><path d="M37 26 h26" stroke="#8B96A2" stroke-width="3"/><g fill="#9AD8E4"><circle cx="30" cy="26" r="2.4"/><circle cx="70" cy="26" r="2.4"/></g>`,
+  aluette: `<g fill="#2A2A36"><ellipse cx="50" cy="70" rx="13" ry="16"/><circle cx="50" cy="40" r="12"/></g><g fill="#9AD8E4"><circle cx="45" cy="39" r="2.2"/><circle cx="55" cy="39" r="2.2"/></g><g fill="none" stroke="#C7A5E4" stroke-width="2.2"><circle cx="50" cy="40" r="20"/><circle cx="50" cy="40" r="27" opacity=".6"/></g><g fill="#C7A5E4"><rect x="47" y="12" width="6" height="8" rx="2"/><rect x="22" y="37" width="8" height="6" rx="2"/><rect x="70" y="37" width="8" height="6" rx="2"/></g>`,
+  evenkeeper: `<g fill="#2A3038"><path d="M50 36 c13 0 19 12 19 28l3 22H28l3-22c0-16 6-28 19-28Z"/><circle cx="50" cy="28" r="11"/></g><g fill="#9AD8E4"><circle cx="46" cy="27" r="1.9"/><circle cx="54" cy="27" r="1.9"/></g><g fill="#8B96A2"><rect x="18" y="50" width="20" height="5" rx="2"/><rect x="62" y="50" width="20" height="5" rx="2"/><rect x="26" y="60" width="12" height="5" rx="2"/><rect x="62" y="60" width="12" height="5" rx="2"/></g><path d="M50 14 v8" stroke="#9AD8E4" stroke-width="3"/><circle cx="50" cy="11" r="3.4" fill="#9AD8E4"/>`,
+  raio: `<g fill="#1A1216"><path d="M50 30 c16 0 24 14 24 34l3 22H23l3-22c0-20 8-34 24-34Z"/><circle cx="50" cy="22" r="13"/></g><g fill="#DC6A42"><circle cx="44" cy="21" r="2.6"/><circle cx="56" cy="21" r="2.6"/></g><path d="M50 40 l20 9v16q0 13-20 19 q-20-6-20-19V49Z" fill="#4A2A2A"/><path d="M50 48 v30 M38 60 h24" stroke="#F3C8A0" stroke-width="2.6"/><g fill="#8B96A2"><rect x="16" y="40" width="10" height="5" rx="2"/><rect x="74" y="40" width="10" height="5" rx="2"/></g>`,
+  unkei: `<g fill="#2A2A2E"><ellipse cx="50" cy="72" rx="12" ry="15"/><circle cx="50" cy="44" r="10"/></g><g fill="#F0DCA6"><circle cx="46" cy="43" r="1.7"/><circle cx="54" cy="43" r="1.7"/></g><g fill="#F0C878"><ellipse cx="50" cy="20" rx="6" ry="9"/><ellipse cx="41" cy="25" rx="5" ry="8" transform="rotate(-38 41 25)"/><ellipse cx="59" cy="25" rx="5" ry="8" transform="rotate(38 59 25)"/></g><circle cx="50" cy="22" r="3.4" fill="#FFF3CE"/><g fill="none" stroke="#C9A05E" stroke-width="2" opacity=".85"><circle cx="50" cy="56" r="17"/></g>`,
   yuruzetta: `<g fill="#241608"><ellipse cx="50" cy="72" rx="14" ry="16"/><circle cx="50" cy="42" r="11"/></g><path d="M32 30 q18-16 36 0 l-5 6 q-13-11-26 0Z" fill="#7A6A8C"/><g fill="#E4DCF0"><circle cx="46" cy="41" r="1.8"/><circle cx="54" cy="41" r="1.8"/></g><path d="M24 62 q26-14 52 0 q-6 20-26 24 q-20-4-26-24Z" fill="#4A3A5C" opacity=".85"/><circle cx="50" cy="18" r="4" fill="#C9A05E"/>`,
   wadatsumi: `<path d="M18 66 q16-22 32-6 q16-22 32-2 q-16 22-32 6 q-16 22-32 2Z" fill="#4E8C8A" opacity=".8"/><g fill="#EDE3C8"><circle cx="50" cy="40" r="8"/></g><path d="M42 34 l-10-8 12 2Z" fill="#9AD8D2"/><path d="M58 34 l10-8 -12 2Z" fill="#9AD8D2"/><g fill="#1E4A50"><circle cx="47" cy="39" r="1.6"/><circle cx="53" cy="39" r="1.6"/></g>`,
   kirarcat: `<g fill="#C9A05E"><ellipse cx="50" cy="60" rx="18" ry="13"/><circle cx="50" cy="40" r="11"/></g><path d="M40 32 l-2-10 8 6Z" fill="#C9A05E"/><path d="M60 32 l2-10 -8 6Z" fill="#C9A05E"/><g fill="#241608"><circle cx="45" cy="39" r="2"/><circle cx="55" cy="39" r="2"/></g><g fill="#F2D693"><circle cx="24" cy="32" r="2.4"/><circle cx="76" cy="36" r="2"/><circle cx="70" cy="74" r="2"/></g>`,
@@ -10206,6 +10409,342 @@ const CARDS = [
     ],
     related: ['orca_001', 'dragonsword_001', 'dollstheater_001', 'lampstand_001', 'whitechapter_001', 'fortress_001'],
     flavor: '波に揺れる花は、拾い上げた物の形で咲き方を変える。'
+  },
+  /* ================= ver9 追加分：ドミニオン ================= */
+  {
+    id: 'wallet_001', ver: 9, name: '財布', cls: 'dominion', type: 'spell',
+    cost: 0, rarity: 'bronze', tribe: 'none',
+    counter: { start: 0 },                                  /* x ＝ 購入値 */
+    art: 'wallet', sky: 'gold',
+    fusion: { accept: { any: true } },
+    text: '購入値：はじめは0（カードの左上に X として出る）\n山札で働く： 自分のターン1のとき、このカードを手札に加える。山札に残りがあれば1枚になるよう捨てる。\n――\n融合： カード（種類を問わない／手札で融合する）\nこれに融合した時、融合したカードのレアリティぶん購入値が増える（レジェンド+4／ゴールド+3／シルバー+2／ブロンズ+1）。\n――\nこのカードはプレイしても手札から消えない（同じ購入値の財布がまた手に入る）。\n以下の効果から一つ選んで働く。\n① 購入値-2： 組んだデッキの構成からランダムなブロンズを1枚手札に加え、そのコストを-1する。\n② 購入値-3： 同じくシルバーを1枚、コスト-1。\n③ 購入値-5： 同じくゴールドを1枚、コスト-2。\n④ 購入値-7： 同じくレジェンドを1枚、コスト-2。\n⑤ 購入値-10： 「株」を1枚場に出す。\n⑥ 購入値-40： 「億り人」を1枚手札に加える。',
+    effects: [
+      { hook: 'deckTurnStart', type: 'deckDrawSelfOnce', params: { turn: 1 } },
+      { hook: 'fuse', type: 'walletGain', params: {} },
+      { hook: 'cast', type: 'keepSelfInHand', params: {} },
+      { hook: 'cast', type: 'chooseOption', params: { prompt: '購入値を使って引き替える', options: [
+        { label: '-2 ブロンズを1枚', effects: [{ type: 'buyValueSpend', params: { amount: 2, then: [
+          { type: 'addFromDeckList', params: { rarity: 'bronze', costMod: -1 } }] } }] },
+        { label: '-3 シルバーを1枚', effects: [{ type: 'buyValueSpend', params: { amount: 3, then: [
+          { type: 'addFromDeckList', params: { rarity: 'silver', costMod: -1 } }] } }] },
+        { label: '-5 ゴールドを1枚', effects: [{ type: 'buyValueSpend', params: { amount: 5, then: [
+          { type: 'addFromDeckList', params: { rarity: 'gold', costMod: -2 } }] } }] },
+        { label: '-7 レジェンドを1枚', effects: [{ type: 'buyValueSpend', params: { amount: 7, then: [
+          { type: 'addFromDeckList', params: { rarity: 'legend', costMod: -2 } }] } }] },
+        { label: '-10 「株」を場に', effects: [{ type: 'buyValueSpend', params: { amount: 10, then: [
+          { type: 'summon', params: { cardId: 'stock_001', count: 1 } }] } }] },
+        { label: '-40 「億り人」を手札に', effects: [{ type: 'buyValueSpend', params: { amount: 40, then: [
+          { type: 'addToHand', params: { cardId: 'okuribito_001', count: 1 } }] } }] }
+      ] } }
+    ],
+    related: ['stock_001', 'okuribito_001'],
+    flavor: '中身が増えるほど、開けるのが惜しくなる。'
+  },
+  {
+    id: 'stock_001', ver: 9, name: '株', cls: 'dominion', type: 'amulet', token: true,
+    cost: 0, rarity: 'legend', tribe: 'none', countdown: 2,
+    art: 'stock', sky: 'gold',
+    text: 'カウントダウン2\nラストワード： 手札の財布の購入値を +4〜+18 のどれかだけ増やす。',
+    effects: [{ hook: 'lastword', type: 'randomEffect', params: { options: [
+      { label: '+4',  effects: [{ type: 'buyValueAdd', params: { amount: 4 } }] },
+      { label: '+7',  effects: [{ type: 'buyValueAdd', params: { amount: 7 } }] },
+      { label: '+10', effects: [{ type: 'buyValueAdd', params: { amount: 10 } }] },
+      { label: '+13', effects: [{ type: 'buyValueAdd', params: { amount: 13 } }] },
+      { label: '+15', effects: [{ type: 'buyValueAdd', params: { amount: 15 } }] },
+      { label: '+18', effects: [{ type: 'buyValueAdd', params: { amount: 18 } }] }
+    ] } }],
+    flavor: '上がるか下がるかは、持ち主の目には最後まで見えない。'
+  },
+  {
+    id: 'okuribito_001', ver: 9, name: '億り人', cls: 'dominion', type: 'follower', token: true,
+    cost: 6, attack: 20, defense: 20, rarity: 'legend', tribe: 'none',
+    keywords: ['intimidate', 'aura'], art: 'okuribito', sky: 'gold',
+    text: '威圧　覇気\nファンファーレ： 場のフォロワーを全て破壊し、「ゴブリン」を4体場に出す。',
+    effects: [
+      { hook: 'fanfare', type: 'destroyAllExceptSelf', params: {} },
+      { hook: 'fanfare', type: 'summon', params: { cardId: 'goblin_001', count: 4 } }
+    ],
+    related: ['goblin_001'],
+    flavor: '財布を開けきった先に、札束しか残らなかった男。'
+  },
+  {
+    id: 'troy_001', ver: 9, name: 'ルーラルのトロイ', cls: 'dominion', type: 'follower',
+    cost: 2, attack: 2, defense: 2, rarity: 'bronze', tribe: 'none',
+    art: 'troy', sky: 'dawn',
+    text: 'ラストワード： 「ルーラルのトロイ」を2枚手札に加える。',
+    effects: [{ hook: 'lastword', type: 'addSelfToHand', params: { count: 2 } }],
+    flavor: '倒れるたび、同じ顔が二人で戻ってくる。'
+  },
+  {
+    id: 'goldwork_001', ver: 9, name: '金塊の工夫', cls: 'dominion', type: 'follower',
+    cost: 2, attack: 1, defense: 3, rarity: 'silver', tribe: 'none',
+    keywords: ['ward'], art: 'goldwork', sky: 'gold',
+    text: '守護\n自分のターン終了時、手札の財布の購入値を+2する。\n進化時： 手札の財布の購入値を+2する。',
+    effects: [
+      { hook: 'turnEnd', type: 'buyValueAdd', params: { amount: 2 } },
+      { hook: 'evolve', type: 'buyValueAdd', params: { amount: 2 } }
+    ],
+    related: ['wallet_001'],
+    flavor: '掘るのではなく、削って増やす。'
+  },
+  {
+    id: 'merchant_001', ver: 9, name: '交易の商人', cls: 'dominion', type: 'follower',
+    cost: 3, attack: 3, defense: 3, rarity: 'silver', tribe: 'none',
+    art: 'merchant', sky: 'dusk',
+    text: 'ファンファーレ： 自分の場にレジェンドのカードがあるなら、手札の財布の購入値を+5する。\n超進化時： 手札の財布の購入値を+15する。',
+    effects: [
+      { hook: 'fanfare', cond: { boardHasRarity: 'legend' }, type: 'buyValueAdd', params: { amount: 5 } },
+      { hook: 'superEvolve', type: 'buyValueAdd', params: { amount: 15 } }
+    ],
+    related: ['wallet_001'],
+    flavor: '良い品の隣に立つだけで、値はひとりでに上がる。'
+  },
+  {
+    id: 'mukan_001', ver: 9, name: '瞑地の天宮・ムカン', cls: 'dominion', type: 'follower',
+    cost: 4, attack: 1, defense: 4, rarity: 'gold', tribe: 'none',
+    art: 'mukan', sky: 'night',
+    text: 'ファンファーレ： 相手のフォロワー全てに2ダメージを与える。\n進化時： 相手の体力が最も高いフォロワーを1体破壊する。',
+    effects: [
+      { hook: 'fanfare', type: 'damage', params: { target: 'enemyFollowers', amount: 2 } },
+      { hook: 'evolve', type: 'destroyHighestHp', params: {} }
+    ],
+    flavor: '瞑る地の宮は、いちばん高い頭から数える。'
+  },
+  {
+    id: 'edelweiss_001', ver: 9, name: '理光の天宮・エーデルワイス', cls: 'dominion', type: 'follower',
+    cost: 4, attack: 2, defense: 4, rarity: 'gold', tribe: 'none',
+    art: 'edelweiss', sky: 'holy',
+    text: 'ファンファーレ： 手札の財布の購入値を-2する。できたなら、このフォロワーは進化する。\nこのフォロワーが進化した時、PPを2回復し、コスト2以下のカードを1枚山札から引く。',
+    effects: [
+      { hook: 'fanfare', type: 'buyValueSpend', params: { amount: 2, then: [
+        { type: 'evolveSelf', params: {} }] } },
+      { hook: 'onEvolve', type: 'refillPP', params: { amount: 2 } },
+      { hook: 'onEvolve', type: 'drawFiltered', params: { maxCost: 2 } }
+    ],
+    related: ['wallet_001'],
+    flavor: '理の光は、代金を払った者にだけ道を見せる。'
+  },
+  {
+    id: 'lulunai_001', ver: 9, name: '絶叫の顕現・ルルナイ', cls: 'dominion', type: 'follower',
+    cost: 3, attack: 3, defense: 1, rarity: 'legend', tribe: 'none',
+    keywords: ['rush'], art: 'lulunai', sky: 'blood',
+    text: '突進\nファンファーレ： 「絶叫の顕現・ルルナイ」をX体場に出す。Xはこのバトルで場に出たルルナイの数。\nXが6以上なら、相手のリーダーに4ダメージを与える。\n進化時： 「絶叫の顕現・ルルナイ」を1枚手札に加える。\n超進化時： バッジ「絶叫の権限」を持つ。',
+    effects: [
+      { hook: 'fanfare', type: 'summonSelfByEntered', params: { bonusAt: 6, then: [
+        { type: 'damage', params: { target: 'enemyLeader', amount: 4 } }] } },
+      { hook: 'evolve', type: 'addSelfToHand', params: { count: 1 } },
+      { hook: 'superEvolve', type: 'grantBadge', params: { badgeId: 'screamright' } }
+    ],
+    relatedBadges: ['screamright'],
+    flavor: '一度叫べば、叫んだ数だけ喉が増える。'
+  },
+  {
+    id: 'varnalek_001', ver: 9, name: '愛絶の顕現・ヴァーナレク', cls: 'dominion', type: 'follower',
+    cost: 3, attack: 2, defense: 1, rarity: 'legend', tribe: 'none',
+    keywords: ['storm'], art: 'varnalek', sky: 'dusk',
+    text: '疾走\nファンファーレ： 双方のリーダーに1ダメージを与える。手札の財布の購入値を+1する。\n進化時： 「愛絶の顕現・ヴァーナレク」を1枚手札に加える。\n超進化時： バッジ「愛絶の権限」を持つ。',
+    effects: [
+      { hook: 'fanfare', type: 'damage', params: { target: 'bothLeaders', amount: 1 } },
+      { hook: 'fanfare', type: 'buyValueAdd', params: { amount: 1 } },
+      { hook: 'evolve', type: 'addSelfToHand', params: { count: 1 } },
+      { hook: 'superEvolve', type: 'grantBadge', params: { badgeId: 'loveright' } }
+    ],
+    relatedBadges: ['loveright'], related: ['wallet_001'],
+    flavor: '愛を絶つたびに、財布だけが少し重くなる。'
+  },
+  /* ================= ver9 追加分：アルカナ ================= */
+  {
+    id: 'restwarrior_001', ver: 9, name: '安息の武者', cls: 'arcana', type: 'follower',
+    cost: 3, attack: 1, defense: 4, rarity: 'bronze', tribe: 'none',
+    keywords: ['ward'], art: 'restwarrior', sky: 'ash',
+    text: '守護\nファンファーレ： バッジ「安息の武者」を持つ。',
+    effects: [{ hook: 'fanfare', type: 'grantBadge', params: { badgeId: 'restwarrior' } }],
+    relatedBadges: ['restwarrior'],
+    flavor: '抜かぬ刀が、いちばん長く町を守る。'
+  },
+  {
+    id: 'restprayer_001', ver: 9, name: '安息の祈祷者', cls: 'arcana', type: 'follower',
+    cost: 4, attack: 4, defense: 4, rarity: 'silver', tribe: 'none',
+    art: 'restprayer', sky: 'holy',
+    text: 'ファンファーレ： 相手のフォロワー全てに3ダメージを与える。\n進化時： バッジ「安息の祈祷者」を持つ。',
+    effects: [
+      { hook: 'fanfare', type: 'damage', params: { target: 'enemyFollowers', amount: 3 } },
+      { hook: 'evolve', type: 'grantBadge', params: { badgeId: 'restprayer' } }
+    ],
+    relatedBadges: ['restprayer'],
+    flavor: '祈りは届く。届いた先が静かになるだけだ。'
+  },
+  {
+    id: 'ronavero_001', ver: 9, name: '禁密の天宮・ロナヴェロ', cls: 'arcana', type: 'follower',
+    cost: 4, attack: 1, defense: 4, rarity: 'gold', tribe: 'none',
+    keywords: ['aura'], art: 'ronavero', sky: 'arcane',
+    text: '覇気\nファンファーレ： 相手のフォロワーからランダムな1体を破壊する。\n進化時： ファンファーレ効果が働く。その後、自分のバッジの持続を+1ターンする。',
+    effects: [
+      { hook: 'fanfare', type: 'destroy', params: { target: 'randomEnemyFollower' } },
+      { hook: 'evolve', type: 'repeatFanfare', params: {} },
+      { hook: 'evolve', type: 'badgeExtendAll', params: { amount: 1 } }
+    ],
+    flavor: '禁じられた密は、宮の奥で時間だけを伸ばしている。'
+  },
+  {
+    id: 'marwin_001', ver: 9, name: '絶望の顕現・マーウィン', cls: 'arcana', type: 'follower',
+    cost: 5, attack: 6, defense: 4, rarity: 'legend', tribe: 'none',
+    art: 'marwin', sky: 'night',
+    text: 'ファンファーレ： 相手のフォロワーからランダムな1体を消滅させる。\n進化時： バッジ「絶望の顕現」を持つ。',
+    effects: [
+      { hook: 'fanfare', type: 'banish', params: { target: 'randomEnemyFollower' } },
+      { hook: 'evolve', type: 'grantBadge', params: { badgeId: 'despairform' } }
+    ],
+    relatedBadges: ['despairform'],
+    flavor: '消えた者の名は、誰の口にも残らない。'
+  },
+  {
+    id: 'saintflash_001', ver: 9, name: 'セイントフラッシュ', cls: 'arcana', type: 'spell',
+    cost: 4, rarity: 'bronze', tribe: 'none',
+    growth: { cost: 7 }, art: 'saintflash', sky: 'holy',
+    text: '成長7： 相手のフォロワー全てに7ダメージを与える。\n――\n相手のフォロワー全てに3ダメージを与える。',
+    effects: [
+      { hook: 'cast', cond: { grown: true }, type: 'damage', params: { target: 'enemyFollowers', amount: 7 } },
+      { hook: 'cast', cond: { notGrown: true }, type: 'damage', params: { target: 'enemyFollowers', amount: 3 } }
+    ],
+    flavor: '閃きは、待てば待つほど白くなる。'
+  },
+  {
+    id: 'maddance_001', ver: 9, name: '狂いの踊り', cls: 'arcana', type: 'spell',
+    cost: 2, rarity: 'silver', tribe: 'none',
+    art: 'maddance', sky: 'blood',
+    text: '自分のリーダーの体力を10回復する。バッジ「狂いの踊り」を持つ。\n（バッジは2ターンで切れ、切れたとき自分のリーダーに10ダメージ）',
+    effects: [
+      { hook: 'cast', type: 'heal', params: { target: 'ownLeader', amount: 10 } },
+      { hook: 'cast', type: 'grantBadge', params: { badgeId: 'maddance' } }
+    ],
+    relatedBadges: ['maddance'],
+    flavor: '踊っているあいだは、痛みの順番が後ろに回る。'
+  },
+  {
+    id: 'medalist_001', ver: 9, name: '勲章の装着士', cls: 'arcana', type: 'follower',
+    cost: 5, attack: 4, defense: 4, rarity: 'gold', tribe: 'none',
+    art: 'medalist', sky: 'gold',
+    text: 'ファンファーレ： PPを4回復する。\n自分のターン終了時、「相手のフォロワーからランダムな1体に3ダメージ」をX回行う。XはあまっているPPの数。',
+    effects: [
+      { hook: 'fanfare', type: 'refillPP', params: { amount: 4 } },
+      { hook: 'turnEnd', type: 'repeatByLeftoverPP', params: { each: [
+        { type: 'damage', params: { target: 'randomEnemyFollower', amount: 3 } }] } }
+    ],
+    flavor: '胸の金具の数だけ、撃てる弾がある。'
+  },
+  {
+    id: 'ara_001', ver: 9, name: '明越花・アラ', cls: 'arcana', type: 'follower',
+    cost: 8, attack: 4, defense: 4, rarity: 'legend', tribe: 'none',
+    art: 'ara', sky: 'dawn',
+    text: '手札で働く： 自分がスペルを使うたび、このカードのコストを-1する。\nファンファーレ： 相手のフォロワー1体に10ダメージを与える。\n進化時： 相手のリーダーに4ダメージを与える。',
+    effects: [
+      { hook: 'handSpellPlayed', type: 'selfCostMod', params: { amount: -1 } },
+      { hook: 'fanfare', type: 'damageChosen', params: { side: 'enemy', count: 1, amount: 10, prompt: '10ダメージを与える相手のフォロワーを選ぶ' } },
+      { hook: 'evolve', type: 'damage', params: { target: 'enemyLeader', amount: 4 } }
+    ],
+    flavor: '夜を越えて咲く花は、唱えられた言葉の数だけ軽くなる。'
+  },
+  /* ================= ver9 追加分：マキナ =================
+     軸は「共鳴」＝自分の山札が偶数のときに追加の効果が働く。
+     偶数奇数を自分で操れるよう、1枚引く／1枚捨てるを持つ札を各段に混ぜてある。 */
+  {
+    id: 'evenbolt_001', ver: 9, name: '偶数の弾芯', cls: 'machina', type: 'follower',
+    cost: 2, attack: 2, defense: 2, rarity: 'bronze', tribe: 'machine',
+    art: 'evenbolt', sky: 'steel',
+    text: '共鳴： このフォロワーは「突進」を持ち、相手のフォロワーからランダムな1体に2ダメージを与える。\n――\nファンファーレ： カードを1枚引く。',
+    effects: [
+      { hook: 'fanfare', cond: { resonance: true }, type: 'grantKeywords', params: { target: 'self', keywords: ['rush'] } },
+      { hook: 'fanfare', cond: { resonance: true }, type: 'damage', params: { target: 'randomEnemyFollower', amount: 2 } },
+      { hook: 'fanfare', type: 'draw', params: { amount: 1 } }
+    ],
+    flavor: '弾芯は二本で一組。欠けたままでは火を噴かない。'
+  },
+  {
+    id: 'tuningdoll_001', ver: 9, name: '調律の歯車人形', cls: 'machina', type: 'follower',
+    cost: 1, attack: 1, defense: 2, rarity: 'bronze', tribe: 'machine',
+    art: 'tuningdoll', sky: 'steel',
+    text: '自分のターン開始時、自分の山札のカードをランダムに1枚捨てる（偶数奇数を入れ替えられる）。\n共鳴： 自分のリーダーの体力を1回復する。',
+    effects: [
+      { hook: 'turnStart', type: 'discardDeck', params: { amount: 1 } },
+      { hook: 'turnStart', cond: { resonance: true }, type: 'heal', params: { target: 'ownLeader', amount: 1 } }
+    ],
+    flavor: '一枚ずつ噛み合わせて、歯車の数をそろえていく。'
+  },
+  {
+    id: 'twinbarrel_001', ver: 9, name: '双胴の連装砲', cls: 'machina', type: 'follower',
+    cost: 3, attack: 2, defense: 3, rarity: 'silver', tribe: 'machine',
+    art: 'twinbarrel', sky: 'ash',
+    text: '共鳴： 相手のフォロワー全てに2ダメージを与える。\n――\nファンファーレ： 相手のフォロワーからランダムな1体に2ダメージを与える。',
+    effects: [
+      { hook: 'fanfare', cond: { resonance: true }, type: 'damage', params: { target: 'enemyFollowers', amount: 2 } },
+      { hook: 'fanfare', cond: { notResonance: true }, type: 'damage', params: { target: 'randomEnemyFollower', amount: 2 } }
+    ],
+    flavor: '二本そろって初めて、狙いが真ん中に来る。'
+  },
+  {
+    id: 'parityforge_001', ver: 9, name: '均整の鋳造炉', cls: 'machina', type: 'amulet',
+    cost: 2, rarity: 'silver', tribe: 'machine', countdown: 3,
+    art: 'parityforge', sky: 'steel',
+    text: 'カウントダウン3\n自分のターン終了時、共鳴しているなら「アーティファクト」を1体場に出す。\nラストワード： カードを1枚引く。',
+    effects: [
+      { hook: 'turnEnd', cond: { resonance: true }, type: 'summon', params: { cardId: 'artifact_001', count: 1 } },
+      { hook: 'lastword', type: 'draw', params: { amount: 1 } }
+    ],
+    related: ['artifact_001'],
+    flavor: '釣り合いの取れた炉だけが、同じ形を吐き出せる。'
+  },
+  {
+    id: 'aluette_001', ver: 9, name: '改境の天宮・アルエット', cls: 'machina', type: 'follower',
+    cost: 4, attack: 3, defense: 4, rarity: 'gold', tribe: 'machine',
+    art: 'aluette', sky: 'arcane',
+    text: 'ファンファーレ： 共鳴していないなら、カードを1枚引く（引くと共鳴する）。\n進化時： 共鳴しているなら、相手のフォロワーからランダムな2体に3ダメージを与え、カードを1枚引く。共鳴していないなら、カードを1枚引く。',
+    effects: [
+      { hook: 'fanfare', cond: { notResonance: true }, type: 'draw', params: { amount: 1 } },
+      { hook: 'evolve', cond: { resonance: true }, type: 'repeatRandomDamage', params: { target: 'randomEnemyFollower', amount: 3, count: 2 } },
+      { hook: 'evolve', type: 'draw', params: { amount: 1 } }
+    ],
+    flavor: '境を改めるには、まず数を合わせることから始める。'
+  },
+  {
+    id: 'evenkeeper_001', ver: 9, name: '偶合の管制官', cls: 'machina', type: 'follower',
+    cost: 5, attack: 4, defense: 4, rarity: 'gold', tribe: 'machine',
+    art: 'evenkeeper', sky: 'night',
+    text: 'ファンファーレ： 自分の山札が奇数なら、1枚引いて共鳴させる。\n自分のターン終了時、共鳴しているなら、自分の他のフォロワー全てを+1/+1する。',
+    effects: [
+      { hook: 'fanfare', cond: { notResonance: true }, type: 'draw', params: { amount: 1 } },
+      { hook: 'turnEnd', cond: { resonance: true }, type: 'buff', params: { target: 'otherOwnFollowers', attack: 1, defense: 1 } }
+    ],
+    flavor: '数が合っているあいだは、誰ひとり欠けさせない。'
+  },
+  {
+    id: 'raio_001', ver: 9, name: '絶尽の顕現・ライオ', cls: 'machina', type: 'follower',
+    cost: 7, attack: 5, defense: 5, rarity: 'legend', tribe: 'machine',
+    keywords: ['ward'], art: 'raio', sky: 'blood',
+    text: '守護\nファンファーレ： 共鳴しているなら、相手のフォロワー全てを破壊する。共鳴していないなら、相手のフォロワー全てに3ダメージを与え、カードを1枚引く。\n超進化時： バッジ「絶尽の共鳴」を持つ。',
+    effects: [
+      { hook: 'fanfare', cond: { resonance: true }, type: 'destroy', params: { target: 'enemyFollowers' } },
+      { hook: 'fanfare', cond: { notResonance: true }, type: 'damage', params: { target: 'enemyFollowers', amount: 3 } },
+      { hook: 'fanfare', cond: { notResonance: true }, type: 'draw', params: { amount: 1 } },
+      { hook: 'superEvolve', type: 'grantBadge', params: { badgeId: 'eternalres' } }
+    ],
+    relatedBadges: ['eternalres'],
+    flavor: '尽きるまで数え、尽きたところで全てを止める。'
+  },
+  {
+    id: 'unkei_001', ver: 9, name: '麗金花・ウンケイ', cls: 'machina', type: 'follower',
+    cost: 4, attack: 3, defense: 3, rarity: 'legend', tribe: 'machine',
+    art: 'unkei', sky: 'gold',
+    text: '手札で働く： 自分の場にフォロワーが出るたび、このカードのコストを-1する。\nファンファーレ： 共鳴しているなら、「アーティファクト」を2体場に出し、PPを2回復する。\n進化時： 共鳴しているなら、相手のリーダーに4ダメージを与える。共鳴していないなら、カードを1枚引く。',
+    effects: [
+      { hook: 'handAllySummon', type: 'selfCostMod', params: { amount: -1 } },
+      { hook: 'fanfare', cond: { resonance: true }, type: 'summon', params: { cardId: 'artifact_001', count: 2 } },
+      { hook: 'fanfare', cond: { resonance: true }, type: 'refillPP', params: { amount: 2 } },
+      { hook: 'evolve', cond: { resonance: true }, type: 'damage', params: { target: 'enemyLeader', amount: 4 } },
+      { hook: 'evolve', cond: { notResonance: true }, type: 'draw', params: { amount: 1 } }
+    ],
+    related: ['artifact_001'],
+    flavor: '金の花は、数の合った庭にしか咲かない。'
   }
 ];
 
@@ -10526,6 +11065,8 @@ function newPlayer(idx, deck, cls, isFirst, deckName) {
     ep: RULES.ep, sep: RULES.sep, evolveUsed: false, superUsed: false,
     extraPP: isFirst ? 0 : 1, extraPPUsedTurn: null, handCostMod: 0, lockNextTurn: false, lockedThisTurn: false, maxPPBonus: 0, cardsPlayedThisTurn: 0,
     deck: shuffle(deck.map(id => makeInstance(id, idx))),
+    srcIds: deck.slice(),                                  // 組んだ40枚の構成（引いた後も消えない。財布が参照する）
+    attackedThisTurn: false,                               // そのターンに自分のフォロワーが攻撃したか
     hand: [], board: [], grave: [], badges: [], machineKinds: [], turnCount: 0, burned: 0,
     destroyedFollowers: [], destroyedAmulets: [], cardEnterCounts: {}, followersEntered: 0, followersThisTurn: 0,
     evolveCount: 0,                                        // このバトル中に自分のフォロワーが進化した回数（方法を問わない）
@@ -10608,6 +11149,7 @@ async function beginTurn() {
   if (p.lockedThisTurn) { p.pp = 0; pushLog(`${p.name} は行動不可（PP0・攻撃と進化ができない）`); }
   refreshCounters(p.idx);
   if (!p.isFirst && RULES.extraPPRecharge.indexOf(p.turnCount) >= 0) p.extraPP = 1;
+  p.attackedThisTurn = false;                              // 「そのターン攻撃していない」を見る効果のため
   p.board.forEach(f => { f.summonedThisTurn = false; f.attacksLeft = f.type === 'follower' ? 1 : 0; f._onceTurn = {}; });
   /* 全力値が10にとどいていたら、このターンは全力状態になる */
   if (p.zenryokuNext) {
@@ -10956,6 +11498,7 @@ async function doAttack(atk, target) {
   const aNode = document.querySelector(`[data-uid="${atk.uid}"]`);
   const tSel = defIsLeader ? `[data-leader="${target.pIdx}"]` : `[data-uid="${target.uid}"]`;
   atk.attacksLeft = 0;
+  G.players[atk.owner].attackedThisTurn = true;
   UI.clearSel();
   await FX.charge(aNode, document.querySelector(tSel));
   Sfx.play('shot');
@@ -11030,6 +11573,22 @@ function condOK(cond, source, extra) {
   if (cond.followersThisTurnMin != null) {                 // そのターンに自分の場へ出たフォロワーの数
     const P = source && G.players[source.owner];
     if (!P || (P.followersThisTurn || 0) < cond.followersThisTurnMin) return false;
+  }
+  if (cond.resonance) {                                    // 共鳴：自分の山札が偶数か
+    const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
+    if (!P || P.deck.length % 2 !== 0) return false;
+  }
+  if (cond.notResonance) {                                 // 共鳴していない（山札が奇数）
+    const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
+    if (!P || P.deck.length % 2 === 0) return false;
+  }
+  if (cond.noAttackThisTurn) {                             // そのターン、自分のフォロワーが1体も攻撃していない
+    const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
+    if (!P || P.attackedThisTurn) return false;
+  }
+  if (cond.boardHasRarity) {                               // 自分の場に指定のレアリティのカードがある
+    const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
+    if (!P || !P.board.some(f => !f.destroyed && (CARD_BY_ID[f.cardId] || {}).rarity === cond.boardHasRarity)) return false;
   }
   if (cond.ppMin != null) {                                // 今あまっているPPが指定以上
     const P = (extra && extra.owner != null) ? G.players[extra.owner] : (source && G.players[source.owner]);
@@ -12979,7 +13538,7 @@ const UI = {
       (cd ? `<span class="c-cd tnum">${cd}</span>` : '') +
       (xv != null ? `<span class="c-x tnum">X${xv}</span>` : '') +
       (okLabel ? `<span class="c-ok tnum">${okLabel}</span>` : '') +
-      (fuLabel ? `<span class="c-fu tnum">${fuLabel}</span>` : '') +
+      (fuLabel ? `<span class="c-fu tnum${xv != null ? ' stack' : ''}">${fuLabel}</span>` : '') +
       ((f.extraEffects && f.extraEffects.length) ? '<span class="c-curse">&#21610;</span>' : '') +
       (kws.length ? `<span class="c-kw">${kws.slice(0, 4).map(k => `<i>${KEYWORDS[k].glyph}</i>`).join('')}</span>` : '') +
       `<div class="c-name"><span class="c-clsmark">${cls.glyph}</span><span class="c-rar"></span>` +
