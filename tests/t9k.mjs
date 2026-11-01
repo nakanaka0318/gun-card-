@@ -285,7 +285,9 @@ const aiv = await pg.evaluate(() => {
                 names: [...document.querySelectorAll('#recAi .airow .aname')].map(x => x.textContent) };
   document.querySelector('[data-ai-pick]').click();
   const det = document.querySelector('#recAi .aidetail');
-  const open = { rows: det ? det.querySelectorAll('.adrow').length : 0 };
+  /* 開いた札そのものを除いた、今の範囲の残り全部が並ぶ */
+  const open = { rows: det ? det.querySelectorAll('.adrow').length : 0,
+                 want: document.querySelectorAll('#recAi .airow').length - 1 };
   document.querySelector('[data-ai-ver="all"]').click();
   return { all, v9, vai, open };
 });
@@ -293,9 +295,10 @@ ok('全デッキのランキングと表が出る',
    aiv.all.rows === aiv.all.want && aiv.all.cols === aiv.all.want + 2, JSON.stringify(aiv.all));
 ok('バージョンで絞れる',
    aiv.v9.rows === 5 && aiv.v9.cols === 7 && aiv.v9.names.every(n => n.indexOf('ver9') >= 0), JSON.stringify(aiv.v9));
-ok('デッキを押すと相手ごとの相性が開く', aiv.open.rows === 4, JSON.stringify(aiv.open));
-ok('verAIで絞ると5デッキだけになる',
-   aiv.vai.rows === 5 && aiv.vai.names.every(n => n.indexOf('verAI') >= 0), JSON.stringify(aiv.vai));
+ok('デッキを押すと相手ごとの相性が開く',
+   aiv.open.rows > 0 && aiv.open.rows === aiv.open.want, JSON.stringify(aiv.open));
+ok('verAIで絞るとverAIのデッキだけになる',
+   aiv.vai.rows === 10 && aiv.vai.names.every(n => n.indexOf('verAI') >= 0), JSON.stringify(aiv.vai));
 
 /* verAI はどのクラスでも、そのクラスの既存最良デッキより上に来ているはず */
 const vaiTop = await pg.evaluate(() => {
@@ -305,15 +308,19 @@ const vaiTop = await pg.evaluate(() => {
   const out = [];
   MATCHUP_CLASSES.forEach(cls => {
     const rows = tot.filter(t => clsOf(t.key) === cls);
-    const ai = rows.find(t => verOf(t.key) === VER_AI);
+    /* _vai はAIに合わせて組んだ方、_vaih は人間向けの理論の方 */
+    const ai = rows.find(t => /_vai$/.test(t.key));
+    const theory = rows.find(t => /_vaih$/.test(t.key));
     const bestOld = rows.filter(t => verOf(t.key) !== VER_AI)[0];
-    out.push({ cls, ai: ai && +ai.pct.toFixed(1), old: bestOld && +bestOld.pct.toFixed(1),
-               oldKey: bestOld && bestOld.key, top: !!(ai && bestOld && ai.pct > bestOld.pct) });
+    out.push({ cls, ai: ai && +ai.pct.toFixed(1), theory: theory && +theory.pct.toFixed(1),
+               old: bestOld && +bestOld.pct.toFixed(1), oldKey: bestOld && bestOld.key,
+               top: !!(ai && bestOld && ai.pct > bestOld.pct), hasTheory: !!theory });
   });
   return out;
 });
-ok('verAIが5クラスすべてにある', vaiTop.every(x => x.ai != null), JSON.stringify(vaiTop));
-ok('verAIがどのクラスでも既存の最良デッキを上回る',
+ok('AIに合わせたverAIが5クラスすべてにある', vaiTop.every(x => x.ai != null), JSON.stringify(vaiTop));
+ok('人間向けのverAI理論も5クラスすべてにある', vaiTop.every(x => x.hasTheory), JSON.stringify(vaiTop));
+ok('AIに合わせたverAIはどのクラスでも既存の最良デッキを上回る',
    vaiTop.every(x => x.top), JSON.stringify(vaiTop));
 
 const aiLay = await pg.evaluate(() => {
