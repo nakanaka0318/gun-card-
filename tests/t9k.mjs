@@ -274,22 +274,47 @@ ok('裏から読んでも勝敗が入れ替わるだけ', data.flip && data.sum 
 
 const aiv = await pg.evaluate(() => {
   const all = { rows: document.querySelectorAll('#recAi .airow').length,
-                cols: document.querySelectorAll('#recAi .mtx thead th').length };
+                cols: document.querySelectorAll('#recAi .mtx thead th').length,
+                want: AI_MATCHUP.keys.length };
   document.querySelector('[data-ai-ver="9"]').click();
   const v9 = { rows: document.querySelectorAll('#recAi .airow').length,
                cols: document.querySelectorAll('#recAi .mtx thead th').length,
                names: [...document.querySelectorAll('#recAi .airow .aname')].map(x => x.textContent) };
+  document.querySelector('[data-ai-ver="' + VER_AI + '"]').click();
+  const vai = { rows: document.querySelectorAll('#recAi .airow').length,
+                names: [...document.querySelectorAll('#recAi .airow .aname')].map(x => x.textContent) };
   document.querySelector('[data-ai-pick]').click();
   const det = document.querySelector('#recAi .aidetail');
   const open = { rows: det ? det.querySelectorAll('.adrow').length : 0 };
   document.querySelector('[data-ai-ver="all"]').click();
-  return { all, v9, open };
+  return { all, v9, vai, open };
 });
-ok('全45デッキのランキングと表が出る',
-   aiv.all.rows === 45 && aiv.all.cols === 47, JSON.stringify(aiv.all));
+ok('全デッキのランキングと表が出る',
+   aiv.all.rows === aiv.all.want && aiv.all.cols === aiv.all.want + 2, JSON.stringify(aiv.all));
 ok('バージョンで絞れる',
    aiv.v9.rows === 5 && aiv.v9.cols === 7 && aiv.v9.names.every(n => n.indexOf('ver9') >= 0), JSON.stringify(aiv.v9));
 ok('デッキを押すと相手ごとの相性が開く', aiv.open.rows === 4, JSON.stringify(aiv.open));
+ok('verAIで絞ると5デッキだけになる',
+   aiv.vai.rows === 5 && aiv.vai.names.every(n => n.indexOf('verAI') >= 0), JSON.stringify(aiv.vai));
+
+/* verAI はどのクラスでも、そのクラスの既存最良デッキより上に来ているはず */
+const vaiTop = await pg.evaluate(() => {
+  const tot = aiTotals(AI_MATCHUP.keys);
+  const clsOf = k => (FORMAT_DECKS.find(f => f.key === k) || {}).cls;
+  const verOf = k => (FORMAT_DECKS.find(f => f.key === k) || {}).ver;
+  const out = [];
+  MATCHUP_CLASSES.forEach(cls => {
+    const rows = tot.filter(t => clsOf(t.key) === cls);
+    const ai = rows.find(t => verOf(t.key) === VER_AI);
+    const bestOld = rows.filter(t => verOf(t.key) !== VER_AI)[0];
+    out.push({ cls, ai: ai && +ai.pct.toFixed(1), old: bestOld && +bestOld.pct.toFixed(1),
+               oldKey: bestOld && bestOld.key, top: !!(ai && bestOld && ai.pct > bestOld.pct) });
+  });
+  return out;
+});
+ok('verAIが5クラスすべてにある', vaiTop.every(x => x.ai != null), JSON.stringify(vaiTop));
+ok('verAIがどのクラスでも既存の最良デッキを上回る',
+   vaiTop.every(x => x.top), JSON.stringify(vaiTop));
 
 const aiLay = await pg.evaluate(() => {
   const bad = [];
