@@ -228,5 +228,109 @@ const rndLay = await pg.evaluate(() => {
 ok('準備画面の押す部品はどれも36px以上ある', rndLay.bad.length === 0, rndLay.bad.join(' | '));
 ok('ランダムを足しても準備画面が横にはみ出さない', !rndLay.over, '');
 
+/* ---------- AI検証タブ ---------- */
+await pg.evaluate(() => UI.go('record')); await pg.waitForTimeout(300);
+const tabs = await pg.evaluate(() => {
+  const names = [...document.querySelectorAll('#recTabs .chip')].map(x => x.textContent);
+  document.querySelector('[data-rec-tab="ai"]').click();
+  const ai = { realHidden: document.getElementById('recReal').hidden, aiShown: !document.getElementById('recAi').hidden };
+  document.querySelector('[data-rec-tab="real"]').click();
+  const real = { realShown: !document.getElementById('recReal').hidden, aiHidden: document.getElementById('recAi').hidden };
+  document.querySelector('[data-rec-tab="ai"]').click();
+  return { names, ai, real };
+});
+ok('実戦とAI検証のタブがある', tabs.names.join() === '実戦,AI検証', JSON.stringify(tabs.names));
+ok('AI検証に切り替わる', tabs.ai.realHidden && tabs.ai.aiShown, JSON.stringify(tabs.ai));
+ok('実戦に戻せる', tabs.real.realShown && tabs.real.aiHidden, JSON.stringify(tabs.real));
+
+/* 焼き込んだ結果そのものの筋が通っているか */
+const data = await pg.evaluate(() => {
+  const n = AI_MATCHUP.keys.length;
+  const want = n * (n - 1) / 2;
+  const seen = new Set();
+  let badRange = 0, badOrder = 0;
+  AI_MATCHUP.pairs.forEach(([i, j, aw, dr]) => {
+    seen.add(i + ',' + j);
+    if (i >= j) badOrder++;
+    if (aw < 0 || dr < 0 || aw + dr > AI_MATCHUP.games) badRange++;
+  });
+  const missingDeck = AI_MATCHUP.keys.filter(k => !FORMAT_DECKS.some(f => f.key === k));
+  /* 裏返しても足して100戦になるか */
+  const a = AI_MATCHUP.keys[0], b2 = AI_MATCHUP.keys[1];
+  const x = aiPairTally(a, b2), y = aiPairTally(b2, a);
+  return { n, want, pairs: AI_MATCHUP.pairs.length, uniq: seen.size, badRange, badOrder,
+           missingDeck, games: AI_MATCHUP.games, total: AI_MATCHUP.total,
+           flip: x.win === y.lose && x.lose === y.win && x.draw === y.draw,
+           sum: x.win + x.lose + x.draw };
+});
+ok('45デッキぶんの組が全て揃っている',
+   data.pairs === data.want && data.uniq === data.want, JSON.stringify(data));
+ok('焼き込んだデッキが全て実在する', data.missingDeck.length === 0, data.missingDeck.join());
+ok('勝ち数と引き分けが試合数の中に収まっている', data.badRange === 0, String(data.badRange));
+ok('組は小さい番号→大きい番号の向きで入っている', data.badOrder === 0, String(data.badOrder));
+ok('総試合数が組数×1組の試合数と合う',
+   data.total === data.want * data.games, `${data.total} / ${data.want * data.games}`);
+ok('裏から読んでも勝敗が入れ替わるだけ', data.flip && data.sum === data.games, JSON.stringify(data));
+
+const aiv = await pg.evaluate(() => {
+  const all = { rows: document.querySelectorAll('#recAi .airow').length,
+                cols: document.querySelectorAll('#recAi .mtx thead th').length };
+  document.querySelector('[data-ai-ver="9"]').click();
+  const v9 = { rows: document.querySelectorAll('#recAi .airow').length,
+               cols: document.querySelectorAll('#recAi .mtx thead th').length,
+               names: [...document.querySelectorAll('#recAi .airow .aname')].map(x => x.textContent) };
+  document.querySelector('[data-ai-pick]').click();
+  const det = document.querySelector('#recAi .aidetail');
+  const open = { rows: det ? det.querySelectorAll('.adrow').length : 0 };
+  document.querySelector('[data-ai-ver="all"]').click();
+  return { all, v9, open };
+});
+ok('全45デッキのランキングと表が出る',
+   aiv.all.rows === 45 && aiv.all.cols === 47, JSON.stringify(aiv.all));
+ok('バージョンで絞れる',
+   aiv.v9.rows === 5 && aiv.v9.cols === 7 && aiv.v9.names.every(n => n.indexOf('ver9') >= 0), JSON.stringify(aiv.v9));
+ok('デッキを押すと相手ごとの相性が開く', aiv.open.rows === 4, JSON.stringify(aiv.open));
+
+const aiLay = await pg.evaluate(() => {
+  const bad = [];
+  document.querySelectorAll('#recAi button').forEach(n => {
+    const r = n.getBoundingClientRect();
+    if (r.width > 0 && (r.height < 36 || r.width < 36)) bad.push((n.className || '') + ':' + Math.round(r.width) + 'x' + Math.round(r.height));
+  });
+  const over = [...document.querySelectorAll('#recAi *')].filter(n => {
+    if (n.closest('.mtwrap')) return false;
+    const r = n.getBoundingClientRect(); return r.width && (r.right > innerWidth + 1.5 || r.left < -1.5);
+  }).length;
+  return { bad, over, page: document.documentElement.scrollWidth > innerWidth };
+});
+ok('AI検証の押す部品はどれも36px以上ある', aiLay.bad.length === 0, aiLay.bad.join(' | '));
+ok('AI検証が横にはみ出さない', aiLay.over === 0 && !aiLay.page, JSON.stringify(aiLay));
+
+/* 賢い打ち方のAIが製品に入っているか */
+const brain = await pg.evaluate(() => ({
+  pick: typeof simPickCard === 'function',
+  atk: typeof simPickAttackTarget === 'function',
+  used: String(simPlayTurn).indexOf('simPickCard') >= 0 && String(simPlayTurn).indexOf('simPickAttackTarget') >= 0,
+  noRandomHand: String(simPlayTurn).indexOf('hand[Math.floor(Math.random()') < 0
+}));
+ok('賢い打ち方のAIが使われている', brain.pick && brain.atk && brain.used, JSON.stringify(brain));
+ok('手札からランダムに出す打ち方は残っていない', brain.noRandomHand, JSON.stringify(brain));
+
+/* PPを使い切る選び方になっているか（1と5がある手札で、PPが5なら5を出す） */
+const ppUse = await pg.evaluate(async () => {
+  startGame({ p1: { deck: { goblin_001: 40 }, cls: 'formation', name: 'A' },
+              p2: { deck: { goblin_001: 40 }, cls: 'formation', name: 'B' }, timer: 0, first: 'p1' });
+  G.sim = true; G.phase = 'play'; G.active = 0;
+  const p = G.players[0];
+  p.pp = 5; p.hand = [];
+  const mk = id => { const c = makeInstance(id, 0); p.hand.push(c); return c; };
+  const one = mk('goblin_001');                  // コスト1
+  const five = mk('goblinraid_001');             // コスト5
+  const picked = simPickCard(p.hand.filter(c => canPlay(c)));
+  return { ok: !!picked, name: picked && picked.name, five: five.name, one: one.name,
+           fiveCost: costOf(five), oneCost: costOf(one) };
+});
+ok('PPを余らせない札を選ぶ', ppUse.ok && ppUse.name === ppUse.five, JSON.stringify(ppUse));
+
 console.log(OUT.join('\n'));
 await b.close();
