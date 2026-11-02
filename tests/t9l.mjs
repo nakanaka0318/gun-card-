@@ -188,5 +188,53 @@ const badge = await pg.evaluate(() => ({
 }));
 ok('バッジ「奥夜花」が守護兵と一緒にマナも出す', badge.mana === true, badge.desc);
 
+/* ---------- EvE（検証用：両方AI・毎ターン3秒・どちらの手札も見える） ---------- */
+const eve = await pg.evaluate(async () => {
+  Sfx.on = false; Bgm.on = false;
+  const a = FORMAT_DECKS.find(x => x.key === 'ward_arcana_v3');
+  const c = FORMAT_DECKS.find(x => x.key === 'discard_accel_v4');
+  Decks.push({ id: 'eveA', name: a.name, cls: a.cls, list: JSON.parse(JSON.stringify(a.list)), limit: true });
+  Decks.push({ id: 'eveB', name: c.name, cls: c.cls, list: JSON.parse(JSON.stringify(c.list)), limit: true });
+  MatchDecks = { p1: 'eveA', p2: 'eveB' };
+  await beginMatch('eve');
+  return {
+    hasButton: !!document.getElementById('startEve'),
+    pause: EVE_PAUSE_MS,
+    screen: UIState.screen, mode: G.mode, phase: G.phase,
+    labels: G.players.map(p => p.name),
+    mullSkipped: G.mullDone[0] === true && G.mullDone[1] === true,
+    timer: G.timerLimit,
+    openHand: document.getElementById('oppHand').classList.contains('open'),
+    oppFaceUp: document.querySelectorAll('#oppHand .card:not(.back)').length,
+    oppBacks: document.querySelectorAll('#oppHand .card.back').length,
+    myHand: document.querySelectorAll('#handMe .card').length,
+    endLabel: document.getElementById('endTurn').textContent,
+    running: EveRunning, view: viewIdx()
+  };
+});
+ok('EvEのボタンが準備画面にある', eve.hasButton, String(eve.hasButton));
+ok('毎ターン3秒止まる設定になっている', eve.pause === 3000, String(eve.pause));
+ok('EvEで対戦が始まる', eve.screen === 'battle' && eve.mode === 'eve' && eve.phase === 'play', JSON.stringify(eve));
+ok('両方AIの名前になる', eve.labels.join() === 'AI 1,AI 2', eve.labels.join());
+ok('引き直しは飛ばす', eve.mullSkipped, String(eve.mullSkipped));
+ok('ターンタイマーは切れている', eve.timer === 0, String(eve.timer));
+ok('相手の手札が表向きになる',
+   eve.openHand && eve.oppFaceUp > 0 && eve.oppBacks === 0, JSON.stringify(eve));
+ok('自分側の手札も見える', eve.myHand > 0, String(eve.myHand));
+ok('見る側が固定される（毎ターン盤面が裏返らない）', eve.view === 0, String(eve.view));
+ok('人間用のターン終了ボタンは押せない字になる', eve.endLabel === 'AI 進行中', eve.endLabel);
+ok('自動進行が動いている', eve.running === true, String(eve.running));
+
+/* 実際に手番が進むか（3秒間隔なので少し待つ） */
+const before = await pg.evaluate(() => ({ t: G.globalTurn, a: G.active }));
+await pg.waitForTimeout(9000);
+const after = await pg.evaluate(() => ({ t: G.globalTurn, a: G.active, log: G.log.length }));
+ok('放っておくと手番が進む',
+   after.t > before.t || after.a !== before.a, JSON.stringify({ before, after }));
+
+/* 画面を離れると止まる */
+const stopped = await pg.evaluate(async () => { UI.go('home'); await new Promise(r => setTimeout(r, 400)); return EveRunning; });
+ok('画面を離れると自動進行が止まる', stopped === false, String(stopped));
+
 console.log(OUT.join('\n'));
 await b.close();

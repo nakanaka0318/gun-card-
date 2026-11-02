@@ -481,6 +481,9 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 
 .bt-ohand{display:flex; justify-content:center; gap:3px; padding:3px 0 0; height:calc(var(--ch)*.42); align-items:flex-start; overflow:hidden}
 .bt-ohand .card.back{height:calc(var(--h)*.36); width:calc(var(--cw)*.36); border-radius:3px}
+/* EvE（検証用）で相手の手札を表向きに出すとき。自分の手札と同じくらいの大きさにする */
+.bt-ohand.open{height:auto; max-height:calc(var(--ch)*.82); gap:2px; padding:2px 0 0; overflow:visible}
+.bt-ohand.open .card{--cw:calc(min(calc((100vw - 26px)/5.3), calc(var(--hUnit)*0.70)) * .62); cursor:default}
 .bt-ohand .card.back::after{font-size:calc(var(--cw)*.26)}
 .bt-field{display:grid; grid-template-rows:auto auto auto; align-content:center; gap:clamp(4px,1.6vh,16px); min-height:0; padding:2px 4px}
 .rowwrap{display:flex; flex-direction:column; gap:3px; min-height:0}
@@ -1072,6 +1075,9 @@ select,input[type=text]{
 @media (orientation:landscape) and (max-height:560px){
   :root{--hUnit:clamp(58px,24vh,108px)}
   .bt-ohand{display:none}                      /* 手札の枚数は上の帯に出ているので裏は省く */
+  /* ただしEvE（検証用）は「どちらの手札も見える」のが主目的なので、横画面でも出す */
+  .bt-ohand.open{display:flex; max-height:calc(var(--ch)*.60)}
+  .bt-ohand.open .card{--cw:calc(min(calc((100vw - 26px)/5.3), calc(var(--hUnit)*0.70)) * .48)}
   .bt-top{padding:3px 8px}
   .lead{padding:2px 6px}
   .lead .em{width:22px; height:22px; font-size:11px}
@@ -1174,6 +1180,10 @@ select,input[type=text]{
         <button class="mode" id="startPve">
           <span class="t">PvE</span>
           <span class="s">AIとの決闘。相手のデッキと、相手に付けるハンデを自由に選べる。</span>
+        </button>
+        <button class="mode" id="startEve">
+          <span class="t">EvE</span>
+          <span class="s">検証用。両方をAIが操作し、1ターンごとに3秒止まる。どちらの手札も表向きで見える。</span>
         </button>
         <button class="mode" id="startTwoPick">
           <span class="t">2PICK</span>
@@ -11423,7 +11433,7 @@ async function beginTurn() {
 
 async function endTurn() {
   if (G.phase !== 'play' || G.busy || G.pending) return;
-  if (G.aiBusy && G.active !== G.aiIdx) return;            // AIの処理中に人間側から割り込ませない
+  if (G.aiBusy && G.mode !== 'eve' && G.active !== G.aiIdx) return;   // AIの処理中に人間側から割り込ませない（EvEは両方AIなので関係ない）
   const p = G.players[G.active];
   G.busy = true;
   await runBoardHook('turnEnd', p.idx);
@@ -12784,6 +12794,30 @@ async function simPlayTurn() {
   await simThink();
   await simRun(() => endTurn());
 }
+/* EvE（検証用）：両方をAIが操作し、1ターンごとに少し止めて人間が追えるようにする。
+   endTurn から呼び戻すと自分自身を呼び続けて積み上がるので、ここだけは繰り返しで回す。 */
+const EVE_PAUSE_MS = 3000;
+let EveRunning = false;
+function stopEve() { EveRunning = false; }
+async function runEve() {
+  if (EveRunning) return;
+  EveRunning = true;
+  try {
+    for (let guard = 0; guard < 400; guard++) {
+      if (!EveRunning || !G || G.mode !== 'eve' || G.phase !== 'play') break;
+      UI.clearSel();
+      G.aiBusy = true; UI.renderBattle();
+      await sleep(EVE_PAUSE_MS);                           /* 毎ターン3秒止める */
+      if (!EveRunning || !G || G.mode !== 'eve' || G.phase !== 'play') break;
+      await simPlayTurn();                                 /* 中で endTurn まで進み、手番が入れ替わる */
+      G.aiBusy = false; UI.renderBattle();
+    }
+  } finally {
+    if (G) G.aiBusy = false;
+    EveRunning = false;
+  }
+}
+
 /* PvE：相手（AI）のターンを自動で進める。演出はそのまま出すので人間が見て追える。 */
 async function aiTakeTurn() {
   if (!G || G.mode !== 'pve' || G.phase !== 'play' || G.active !== G.aiIdx || G.aiBusy) return;
@@ -13048,7 +13082,7 @@ function handiRelatedCards(id) {
   return out;
 }
 /* 盤面をどちらの視点で描くか。PvEでは自分（プレイヤー1）に固定する。 */
-function viewIdx() { return (G && G.mode === 'pve') ? 0 : (G ? G.active : 0); }
+function viewIdx() { return (G && (G.mode === 'pve' || G.mode === 'eve')) ? 0 : (G ? G.active : 0); }
 /* カードが持つ発動タイミングの用語 */
 function hooksOf(cardId) {
   const def = CARD_BY_ID[cardId]; if (!def) return [];
@@ -13759,7 +13793,7 @@ function fullRuleText() {
      Object.keys(ABILITY_TERMS).length + '語、特殊な仕組みが ' + Object.keys(MECHANIC_TERMS).length + '語。');
 
   head('2. 画面の構成');
-  li('BATTLE（決闘を始める／1人回し）… デッキと制限時間を選んで対戦を始める。1人回し・PvE・2PICKの3モードの入口。デッキは「ランダム」で保存済みデッキから選ばせることもできる（40枚そろったデッキだけが選ばれ、同じデッキは続けて選ばれない）。');
+  li('BATTLE（決闘を始める／1人回し）… デッキと制限時間を選んで対戦を始める。1人回し・PvE・EvE（検証用：両方をAIが操作し、1ターンごとに3秒止まり、どちらの手札も表向きで見える）・2PICKの4モードの入口。デッキは「ランダム」で保存済みデッキから選ばせることもできる（40枚そろったデッキだけが選ばれ、同じデッキは続けて選ばれない）。');
   li('DECK（デッキ編成）… ' + RULES.deckSize + '枚のデッキを作る。ver・コスト・クラス・種類・レアリティ・タイプで絞り込み、カード名と説明文でも検索できる。1列表示とグリッド表示を切り替えられ、並び順は「ver→コスト」と「コスト→ver」から選べる。');
   li('COMMUNITY（みんなのデッキ）… 自分の保存済みデッキを投稿して他の人と共有し、他の人が投稿したデッキを自分の保存済みデッキに登録して使える。投稿は同じページを開いている人に見え、削除は投稿した本人（その端末）だけができる。');
   li('FORMAT（フォーマットデッキ一覧）… 完成済みのデッキを閲覧し、デッキ文をコピーしたり、自分の保存済みデッキに登録できる。');
@@ -14354,6 +14388,7 @@ const UI = {
     }
     if (name === 'community') { communitySubscribe(); this.renderCommunity(); }
     if (name === 'format') this.renderFormat();
+    if (name !== 'battle') stopEve();                      // 盤面を離れたらEvEの自動進行を止める
     if (name === 'matchup') this.renderMatchup();
     if (name === 'record') this.renderRecord();
     if (name === 'cards') this.renderCards();
@@ -15562,7 +15597,16 @@ const UI = {
     this.renderStanceBox(me, opp);
 
     const oh = $('#oppHand'); oh.innerHTML = '';
-    for (let i = 0; i < Math.min(opp.hand.length, 9); i++) { const b = el('div', 'card back'); b.appendChild(el('i')); oh.appendChild(b); }
+    /* EvE（検証用）では相手の手札も表向きにする。それ以外はいつもどおり裏のまま */
+    const openHand = !!(G.mode === 'eve');
+    oh.classList.toggle('open', openHand);
+    if (openHand) {
+      oh.style.setProperty('--n', Math.max(1, opp.hand.length));
+      opp.hand.forEach(c => oh.appendChild(this.cardFace(c, { zone: 'hand', side: 'opp', extra: 'shown ' })));
+    } else {
+      oh.style.removeProperty('--n');
+      for (let i = 0; i < Math.min(opp.hand.length, 9); i++) { const b = el('div', 'card back'); b.appendChild(el('i')); oh.appendChild(b); }
+    }
 
     const pickCls = f => {
       if (!pd) return '';
@@ -15643,6 +15687,8 @@ const UI = {
     if (!G.timerLimit) { tm.innerHTML = '&infin;'; tm.classList.remove('warn'); }
     else { tm.textContent = G.timeLeft; tm.classList.toggle('warn', G.timeLeft <= 10); }
     $('#endTurn').disabled = G.phase !== 'play' || G.busy || !!pd || !!G.aiBusy;
+    /* EvEは人間が押すものが無いので、押せないことが分かる字にしておく */
+    $('#endTurn').textContent = G.mode === 'eve' ? 'AI 進行中' : 'TURN END';
   },
   slot(i) { const s = el('div', 'slot', '&#43;'); s.dataset.zone = 'slot'; s.dataset.slot = i; return s; },
 
@@ -16167,13 +16213,15 @@ function initEvents() {
   });
   const startBattle = mode => {
     const d1 = findDeck(MatchDecks.p1), d2 = findDeck(MatchDecks.p2);
-    const n1 = mode === 'pve' ? '自分' : 'プレイヤー1', n2 = mode === 'pve' ? '相手（AI）' : 'プレイヤー2';
+    const n1 = mode === 'pve' ? '自分' : mode === 'eve' ? 'AI 1' : 'プレイヤー1';
+    const n2 = mode === 'pve' ? '相手（AI）' : mode === 'eve' ? 'AI 2' : 'プレイヤー2';
     if (!deckValid(d1)) { UI.toast(`${n1}のデッキ「${d1.name}」が未完成`); return; }
     if (!deckValid(d2)) { UI.toast(`${n2}のデッキ「${d2.name}」が未完成`); return; }
     beginMatch(mode);
   };
   $('#startPvp').addEventListener('click', () => startBattle('pvp'));
   $('#startPve').addEventListener('click', () => startBattle('pve'));
+  $('#startEve').addEventListener('click', () => startBattle('eve'));
   $('#startTwoPick').addEventListener('click', () => { UI.go('twopick'); });
 
   /* ---- 2PICK ---- */
@@ -16754,15 +16802,16 @@ function blockZoomAndSelect() {
 /* over: 2PICKなど、保存済みデッキ以外で戦うときの指定 { d1, d2, handicaps, save } */
 async function beginMatch(mode, over) {
   stopTimer();
+  stopEve();
   $('#ovResult').hidden = true;
-  const pve = mode === 'pve';
+  const pve = mode === 'pve', eve = mode === 'eve';
   const d1 = (over && over.d1) || findDeck(MatchDecks.p1);
   const d2 = (over && over.d2) || findDeck(MatchDecks.p2);
   const handi = over && over.handicaps ? over.handicaps.slice() : (pve ? PveHandicaps.slice() : []);
   const firstIdx = startGame({
-    p1: { deck: d1.list, cls: d1.cls, name: d1.name, label: pve ? '自分' : null },
-    p2: { deck: d2.list, cls: d2.cls, name: d2.name, label: pve ? '相手（AI）' : null, handicaps: handi },
-    timer: Settings.timer, first: Settings.first, mode: pve ? 'pve' : 'pvp'
+    p1: { deck: d1.list, cls: d1.cls, name: d1.name, label: pve ? '自分' : eve ? 'AI 1' : null },
+    p2: { deck: d2.list, cls: d2.cls, name: d2.name, label: pve ? '相手（AI）' : eve ? 'AI 2' : null, handicaps: handi },
+    timer: eve ? 0 : Settings.timer, first: Settings.first, mode: pve ? 'pve' : eve ? 'eve' : 'pvp'
   });
   G.saveAfter = (over && over.save) || null;               // バトル終了後に保存するデッキ
   UI.go('battle');
@@ -16773,6 +16822,16 @@ async function beginMatch(mode, over) {
   UI.renderBattle();
   FX.banner(`${G.players[firstIdx].name} の先攻`, 'CUT FOR THE DEAL');
   if (pve) G.mullDone[G.aiIdx] = true;                     // AIは引き直さない
+  if (eve) {                                               // EvEは両方AIなので引き直しを飛ばして始める
+    G.mullDone = [true, true];
+    G.phase = 'play';
+    G.active = firstIdx;
+    await beginTurn();
+    UI.renderBattle();
+    await FX.banner(`${G.players[G.active].name} のターン`, 'TURN 1');
+    runEve();
+    return;
+  }
   const mullIdx = pve ? 0 : firstIdx;
   setTimeout(() => UI.showMulligan(mullIdx), 900);
 }
