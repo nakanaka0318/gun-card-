@@ -244,6 +244,10 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .hdrow[aria-pressed="true"] .hdck{border-color:#E9C47C; background:linear-gradient(#C08C33,#8A5C18); color:#26170A}
 
 /* ================= カード ================= */
+/* 新しく場や手札に出てきた札だけ、軽く浮き上がらせる */
+@keyframes cardIn{ from{opacity:0; transform:translateY(6px) scale(.94)} to{opacity:1; transform:none} }
+.card.justin{animation:cardIn .2s cubic-bezier(.22,.7,.3,1)}
+@media (prefers-reduced-motion: reduce){ .card.justin{animation:none} }
 .card{
   --h:calc(var(--cw)/0.70);
   /* --rf: 枠の明るい線 ／ --rf2: 枠の暗い線。レアリティごとに差し替える */
@@ -487,7 +491,9 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 .bt-ohand .card.back::after{font-size:calc(var(--cw)*.26)}
 .bt-field{display:grid; grid-template-rows:auto auto auto; align-content:center; gap:clamp(4px,1.6vh,16px); min-height:0; padding:2px 4px}
 .rowwrap{display:flex; flex-direction:column; gap:3px; min-height:0}
-.row{order:1; width:100%; min-width:0; display:flex; justify-content:center; align-items:center; gap:clamp(3px,.8vw,8px); min-height:0}
+/* 場は札1枚ぶんの高さをいつも確保しておく。空のときに潰れると、
+   札を出した瞬間に盤面全体が上下にずれてしまうため。 */
+.row{order:1; width:100%; min-width:0; display:flex; justify-content:center; align-items:center; gap:clamp(3px,.8vw,8px); min-height:var(--ch)}
 .row.me{align-items:flex-end}
 .badges{order:2; align-self:flex-start; display:flex; gap:3px; padding-left:3px}
 .bg{
@@ -1030,6 +1036,48 @@ select,input[type=text]{
 .recrow .rres.lose{background:#3A211A; color:#E8B09A; border:1px solid #AE4429}
 .recrow .rres.draw{background:#2A2419; color:var(--mute); border:1px solid var(--edge2)}
 .recempty{margin-top:14px}
+/* ---- 調整履歴 ---- */
+.upd{margin-top:14px; padding:12px 13px; background:linear-gradient(#261C14,#1E160F); border:1px solid var(--edge); border-radius:var(--r)}
+.upd.latest{border-color:var(--brass-d)}
+.upd h3{margin:4px 0 6px; font-family:var(--f-display); font-weight:400; font-size:17px; color:var(--brass-l); letter-spacing:.02em}
+.updhead{display:flex; align-items:center; gap:9px}
+.upddate{font-family:var(--f-num); font-size:12.5px; color:var(--mute); letter-spacing:.06em}
+.updnew{
+  font-family:var(--f-type); font-size:9px; letter-spacing:.14em; padding:3px 7px; border-radius:2px;
+  background:linear-gradient(#C08C33,#8A5C18); color:#26170A; font-weight:700;
+}
+.updgroup{
+  margin:13px 0 5px; font-family:var(--f-type); font-size:9.5px; letter-spacing:.16em; color:var(--brass);
+  border-top:1px solid var(--edge); padding-top:7px;
+}
+.updlist{display:flex; flex-direction:column; gap:5px}
+.upditem{
+  display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 9px; padding:7px 9px;
+  background:#221A12; border:1px solid #3A2B1C; border-radius:var(--r); border-left:3px solid var(--edge2);
+}
+.upditem.k-rule{border-left-color:#7A5AA0}
+.upditem.k-new{border-left-color:#5E9C4E}
+.updname{
+  font-size:12.5px; font-weight:600; color:var(--brass-l); text-align:left;
+  background:none; border:0; padding:0; min-height:0; text-decoration:underline; text-decoration-color:var(--brass-d);
+  text-underline-offset:3px;
+}
+.updname.plain{text-decoration:none; color:var(--paper)}
+.updname:hover{color:#FFE9B8}
+.updchange{display:inline-flex; align-items:baseline; flex-wrap:wrap; gap:6px; font-size:12px}
+.updchange .from{text-decoration:line-through; color:var(--faint)}
+.updchange .arw{font-style:normal; color:var(--brass-d)}
+.updchange .to{color:var(--paper); font-weight:600}
+.updtext{flex:1 1 220px; min-width:0; font-size:12px; line-height:1.65; color:var(--paper)}
+.updwhy{flex:1 1 100%; font-size:11px; line-height:1.6; color:var(--mute); border-left:2px solid var(--brass-d); padding-left:7px}
+@media (pointer:coarse){ .updname{min-height:30px; display:inline-flex; align-items:center} }
+
+/* 「この日付で確定」の断り書き。見落とさないよう枠で囲う */
+.note.fixed{
+  margin-top:8px; padding:7px 10px; border:1px solid var(--brass-d); border-left-width:3px;
+  border-radius:var(--r); background:#241A10; color:var(--sand);
+}
+.note.fixed b{color:var(--brass-l); font-weight:600}
 .rectabs{margin-bottom:12px}
 /* AI検証のランキング。押すとそのデッキの相性が下に開く */
 .airank{display:flex; flex-direction:column; gap:4px; margin-top:10px}
@@ -1153,6 +1201,7 @@ select,input[type=text]{
         <button class="sign" data-go="format"><span class="k">FORMAT</span><span class="d">フォーマットデッキ一覧</span></button>
         <button class="sign" data-go="matchup"><span class="k">MATCHUP</span><span class="d">相性検証（自動対戦で解析）</span></button>
         <button class="sign" data-go="record"><span class="k">RECORD</span><span class="d">自分の戦績から相性表をつくる</span></button>
+        <button class="sign" data-go="updates"><span class="k">UPDATES</span><span class="d">カードの調整履歴</span></button>
         <button class="sign" data-go="cards"><span class="k">CARDS</span><span class="d">カード一覧・詳細</span></button>
         <button class="sign" data-go="rule"><span class="k">RULE</span><span class="d">ルールブック</span></button>
       </nav>
@@ -1453,6 +1502,19 @@ select,input[type=text]{
     </div>
   </section>
 
+  <!-- ============ UPDATES（カードの調整履歴） ============ -->
+  <section class="screen" id="sc-updates" hidden>
+    <div class="bar">
+      <button class="btn sm" data-go="home">&#9664; HOME</button>
+      <h2>調整履歴</h2>
+      <span class="tag">UPDATES</span>
+    </div>
+    <div class="scroll">
+      <p class="note">カードとルールを直した記録。新しいものが上。カード名を押すと、そのカードの詳しい説明が開く。</p>
+      <div id="updateList"></div>
+    </div>
+  </section>
+
   <!-- ============ CARDS ============ -->
   <section class="screen" id="sc-cards" hidden>
     <div class="bar">
@@ -1619,6 +1681,8 @@ select,input[type=text]{
 /* ---------------------------------------------------------------- [0] 汎用 */
 document.documentElement.lang = 'ja';          // 日本語の文書として扱わせる
 const $ = s => document.querySelector(s);
+/* 「動きを減らす」設定の人には、盤面の滑りや出現の演出を出さない */
+const ReduceMotion = !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 const el = (t, c, h) => { const n = document.createElement(t); if (c) n.className = c; if (h != null) n.innerHTML = h; return n; };
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
@@ -1762,7 +1826,7 @@ const BGM_TRACKS = {
 /* 画面と曲の対応。ここに無い画面は「出立の支度」を流す */
 const BGM_FOR_SCREEN = {
   home: 'home', setup: 'menu', twopick: 'menu', pickrun: 'menu', community: 'menu', format: 'menu',
-  deck: 'deck', cards: 'deck', rule: 'rule', matchup: 'matchup', record: 'matchup', battle: 'battle'
+  deck: 'deck', cards: 'deck', rule: 'rule', updates: 'rule', matchup: 'matchup', record: 'matchup', battle: 'battle'
 };
 
 /* 音楽全体の音量と、これ以上は大きくしない上限。
@@ -12373,9 +12437,9 @@ function matchupPairs(ver) {
   return out;
 }
 /* ---- AI検証：フォーマットデッキ55種の総当たり（焼き込み済みの結果） ----
-   この index.html と同じAI同士で、1組100戦ずつ 148500 試合を回した結果を
-   そのまま持たせている（遊ぶたびに計算し直すわけではない）。
-   カードやフォーマットデッキやルールを直したら、ここも取り直すこと。 */
+   2026-11-02 時点のカード・デッキ・ルールで、1組100戦ずつ 148500 試合を回した結果。
+   ここで確定とする。このあとフォーマットデッキが増えてもカードの効果が変わっても、
+   この数字は取り直さない（その時点の記録として残す）。 */
 const AI_MATCHUP = {
   games: 100, total: 148500, at: '2026-11-02',
   keys: ['machina_v1','formation_v1','accel_v1','arcana_v1','dominion_v1','buff_formation_v2','treasure_accel_v2','choice_dominion_v2','spell_arcana_v2','odd_machina_v2','combo_formation_v3','growth_accel_v3','selfharm_dominion_v3','ward_arcana_v3','doll_machina_v3','pirate_formation_v4','discard_accel_v4','phoenix_dominion_v4','crystal_arcana_v4','voice_machina_v4','wimuel_formation_v5','rhinoceus_accel_v5','shakudo_dominion_v5','amulet_arcana_v5','exp_machina_v5','formation_v6','accel_v6','dominion_v6','arcana_v6','machina_v6','formation_v7','accel_v7','dominion_v7','arcana_v7','machina_v7','accel_v8','formation_v8','dominion_v8','arcana_v8','machina_v8','formation_v9','accel_v9','dominion_v9','arcana_v9','machina_v9','arcana_vai','accel_vai','machina_vai','formation_vai','dominion_vai','accel_vaih','arcana_vaih','dominion_vaih','machina_vaih','formation_vaih'],
@@ -12670,6 +12734,75 @@ function aiTotals(keys) {
     return t;
   }).sort((a, b) => (b.pct == null ? -1 : b.pct) - (a.pct == null ? -1 : a.pct));
 }
+/* ---- カードとルールの調整履歴 ----
+   新しいものを配列の先頭に足していく。
+   kind: 'rule'（決まりごと）／'card'（カード1枚）／'new'（追加）
+   card を書くと、その名前からカードを引いて詳しい説明を開けるようにする。 */
+const UPDATES = [
+  {
+    date: '2026-11-02',
+    title: '能力調整25件と、威圧・覇気の決まり',
+    note: '守りに回りながら顔を殴れる札と、数字が高すぎた札を中心に下げた。合わせて、伸び悩んでいた軸をいくつか押し上げている。',
+    groups: [
+      {
+        head: '決まりごと',
+        items: [
+          { kind: 'rule', name: '威圧・覇気',
+            text: '相手のリーダーを攻撃した時点で、威圧と覇気を失うようにした。守りに使うか攻めに使うかのどちらかしか選べない。フォロワーを攻撃した場合は失わない。',
+            why: '触れないまま毎ターン顔を殴り続けられる札が強すぎたため。' }
+        ]
+      },
+      {
+        head: '下方修正',
+        items: [
+          { kind: 'card', id: 'wilbert_001', name: '守護の聖騎士・ウィルバート', from: '4/6', to: '1/5' },
+          { kind: 'card', id: 'goliath_001', name: '激震のゴリアテ', from: '5/6', to: '3/6',
+            why: '中立でどのクラスも使えるうえ、4コストの数字として飛び抜けていた。' },
+          { kind: 'card', id: 'voralai_001', name: '古き天刀・ヴォーラライ', from: '2/2', to: '0/2' },
+          { kind: 'card', id: 'ripefish_001', name: '完熟の海魚', from: '1/2', to: '1/1' },
+          { kind: 'card', id: 'reargente_001', name: 'Re銀色の清純・アルジャンテ', from: '4/4', to: '3/2' },
+          { kind: 'card', id: 'lowtoy_001', name: '低劣の玩具', from: '1/3', to: '1/2' },
+          { kind: 'card', id: 'morphei_001', name: '葦鎌の従者・モルフェイ', from: '5/5', to: '3/1' },
+          { kind: 'card', id: 'ortenia_001', name: '慈愛の凛華・オルテニア', from: '7コスト', to: '8コスト' },
+          { kind: 'card', id: 'sagatsumatsu_001', name: '断頭の斬姫・サガツマツ', from: '疾走・必殺', to: '疾走',
+            why: '手札を空にするたび無料で湧くうえ、必殺まで付いて止まらなかった。' },
+          { kind: 'card', id: 'axeabyss_001', name: '天斧の深淵', from: 'コスト-1して疾走を持つ', to: 'コスト-1する' }
+        ]
+      },
+      {
+        head: '上方修正',
+        items: [
+          { kind: 'card', id: 'nova_001', name: '機構ノヴァ', from: '2/2・クキシロのコスト-1', to: '3/3・クキシロのコスト-2' },
+          { kind: 'card', id: 'kukishiro_001', name: '丁半鬼・クキシロ', from: 'バッジ「丁半」のみ', to: 'ファンファーレで「疾走の機械」を2体も出す' },
+          { kind: 'card', id: 'catapult_001', name: 'アーティファクトカタパルト', from: 'ラストワードなし', to: 'ラストワードで「守護の機械」を2体出す' },
+          { kind: 'card', id: 'wimuel_001', name: '香風の執行者・ウィムエル', from: '9コスト', to: '7コスト' },
+          { kind: 'card', id: 'lastdancer_001', name: 'ラストダンサー', from: '4コスト 3/3', to: '2コスト 2/2' },
+          { kind: 'card', id: 'saintstaff_001', name: '聖女の杖', from: '3コスト', to: '2コスト' },
+          { kind: 'card', id: 'relievewolf_001', name: 'リリーブウルフ', from: '成長6', to: '成長5' },
+          { kind: 'card', id: 'holyscripture_001', name: '救済の聖典', from: 'カウントダウン4', to: 'カウントダウン3' },
+          { kind: 'card', id: 'leiantose_001', name: '古き天書・リアントース', from: '壊れたアミュレット7枚以上', to: '5枚以上' },
+          { kind: 'card', id: 'sleepinglion_001', name: '眠れる獅子', from: 'ターン終了時に2ダメージ', to: 'ターン終了時に2ダメージを2回' },
+          { kind: 'card', id: 'victoria_001', name: 'ヴィクトリア', from: '能力なし', to: '必殺・突進' },
+          { kind: 'card', id: 'expstart_001', name: '実験開始', from: '成長なし',
+            to: '成長8： 前述の効果は働かず、「没入の実験体」を4体出す（1体目は守護・2体目は必殺・3体目は吸血）' },
+          { kind: 'card', id: 'vivaty_001', name: '古き天眼・ビバティー', from: 'ファンファーレなし', to: 'ファンファーレで「マナ」を1つ出す' },
+          { kind: 'card', id: 'vanishdemon_001', name: '消える魔', from: '相手1体を-1/0',
+            to: '相手1体を-1/0 ＋ 手札のランダムなコスト1の財宝カードのコストを-1' },
+          { kind: 'rule', name: 'バッジ「奥夜花」',
+            text: '守護兵を出すときに「マナ」も1つ出すようにした。' }
+        ]
+      },
+      {
+        head: 'そのほか',
+        items: [
+          { kind: 'new', name: '【ver8】強気アクセル',
+            text: '【ver8】強気エニグマ から名前を変えた。アクセルのデッキなので名前をそろえた。' }
+        ]
+      }
+    ]
+  }
+];
+
 /* 勝率からティアの文字を出す。S が最も強い */
 const TIER_CUTS = [[62, 'S'], [57, 'A'], [53, 'B'], [47, 'C'], [42, 'D']];
 function tierOf(pct) { if (pct == null) return '&mdash;'; for (const [v, l] of TIER_CUTS) if (pct >= v) return l; return 'E'; }
@@ -13131,7 +13264,7 @@ function mechanicsOf(cardId) {
   return out;
 }
 
-const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'record', 'cards', 'rule', 'battle'];
+const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'record', 'updates', 'cards', 'rule', 'battle'];
 let Settings = { timer: store.get('timer', 90), first: store.get('first', 'random') };
 
 /* ============================ デッキ管理 ============================
@@ -13802,6 +13935,7 @@ function fullRuleText() {
      + '「AI検証」に切り替えると、フォーマットデッキ' + AI_MATCHUP.keys.length + '種をAI同士で総当たりさせた結果（1組'
      + AI_MATCHUP.games + '戦・計' + AI_MATCHUP.total.toLocaleString() + '試合）を、同じ形の相性表で見られる。');
   li('CARDS（カード一覧）… 全カードを絞り込んで見比べ、1枚ずつ詳細（効果の全文・関連カード・用語の解説）を開ける。');
+  li('UPDATES（調整履歴）… カードとルールを直した記録。新しいものが上に並び、カード名を押すとそのカードの説明が開く。');
   li('RULE（ルールブック）… この文章の元になっている項目別のルール。一番下にこの全文がある。');
 
   head('3. 勝敗の条件');
@@ -13951,6 +14085,7 @@ function fullRuleText() {
   li('1組あたりの試合数を選べる。勝率は、不利を錆色、五分を灰色、有利を緑で表す。');
   li('「戦績」の「AI検証」には、フォーマットデッキ' + AI_MATCHUP.keys.length + '種をAI同士で総当たりさせた結果が入っている（' +
      AI_MATCHUP.at + '時点・1組' + AI_MATCHUP.games + '戦・計' + AI_MATCHUP.total.toLocaleString() + '試合）。' +
+     'この表は' + AI_MATCHUP.at + '時点で確定しており、以降にデッキが増えてもカードの効果が変わっても取り直さない。' +
      'バージョンで絞れて、デッキを押すとそのデッキの相手ごとの相性が開く。' +
      'AIは「PPを使い切る組み合わせで安い札から出す／倒しきれるなら顔を殴る／相打ちにならない交換を選ぶ」までなので、' +
      '何ターンもかけて組み立てるコンボのデッキは実際より低く出る。');
@@ -14391,6 +14526,7 @@ const UI = {
     if (name !== 'battle') stopEve();                      // 盤面を離れたらEvEの自動進行を止める
     if (name === 'matchup') this.renderMatchup();
     if (name === 'record') this.renderRecord();
+    if (name === 'updates') this.renderUpdates();
     if (name === 'cards') this.renderCards();
     if (name === 'rule') this.renderRule();
     Bgm.forScreen(name);                                   // その場に合った曲に替える
@@ -14999,6 +15135,40 @@ const UI = {
     $('#ovText').hidden = false;
   },
 
+  /* ---- 調整履歴 ---- */
+  renderUpdates() {
+    const box = $('#updateList'); box.innerHTML = '';
+    if (!UPDATES.length) { box.appendChild(el('p', 'empty', 'まだ調整はない。')); return; }
+    UPDATES.forEach((u, ui) => {
+      const sec = el('section', 'upd' + (ui === 0 ? ' latest' : ''));
+      sec.innerHTML = `<div class="updhead"><span class="upddate tnum">${esc(u.date)}</span>` +
+        `${ui === 0 ? '<span class="updnew">最新</span>' : ''}</div>` +
+        `<h3>${esc(u.title)}</h3>` + (u.note ? `<p class="note">${esc(u.note)}</p>` : '');
+      (u.groups || []).forEach(g => {
+        sec.appendChild(el('div', 'updgroup', esc(g.head)));
+        const list = el('div', 'updlist');
+        (g.items || []).forEach(it => {
+          const row = el('div', 'upditem k-' + (it.kind || 'card'));
+          const known = it.id && CARD_BY_ID[it.id];
+          const nameHtml = known
+            ? `<button class="updname" type="button" data-upd-card="${esc(it.id)}">${esc(it.name)}</button>`
+            : `<span class="updname plain">${esc(it.name)}</span>`;
+          let body = '';
+          if (it.from != null && it.to != null) {
+            body = `<span class="updchange"><s class="from">${esc(it.from)}</s>` +
+              `<i class="arw">&rarr;</i><b class="to">${esc(it.to)}</b></span>`;
+          } else if (it.text) {
+            body = `<span class="updtext">${esc(it.text)}</span>`;
+          }
+          row.innerHTML = nameHtml + body + (it.why ? `<span class="updwhy">${esc(it.why)}</span>` : '');
+          list.appendChild(row);
+        });
+        sec.appendChild(list);
+      });
+      box.appendChild(sec);
+    });
+  },
+
   /* ---- 戦績：自分がやった試合から相性表をつくる ---- */
   renderRecord() {
     /* クラスの選び口とデッキ名の候補は、開くたびに作り直す（デッキが増えているかもしれない） */
@@ -15044,9 +15214,12 @@ const UI = {
     const fdOf = k => FORMAT_DECKS.find(f => f.key === k);
     box.appendChild(el('p', 'note',
       `フォーマットデッキ${AI_MATCHUP.keys.length}種を、このゲームと同じAI同士で総当たりさせた結果。` +
-      `1組${AI_MATCHUP.games}戦・計${AI_MATCHUP.total.toLocaleString()}試合（${AI_MATCHUP.at}時点）。` +
+      `1組${AI_MATCHUP.games}戦・計${AI_MATCHUP.total.toLocaleString()}試合。` +
       `AIは「PPを使い切る組み合わせで安い札から出す／倒しきれるなら顔を殴る／相打ちにならない交換を選ぶ」まで。` +
       `何ターンもかけて組み立てるコンボは作れないので、そういうデッキは実際より低く出る。`));
+    box.appendChild(el('p', 'note fixed',
+      `この表は <b>${AI_MATCHUP.at} 時点で確定</b>。これより後に増えたデッキや、` +
+      `変わったカードの効果は反映していない。その時点の記録として残してある。`));
 
     /* 見る範囲（バージョン） */
     const vers = DECK_VERSIONS.filter(v => AI_MATCHUP.keys.some(k => (fdOf(k) || {}).ver === v));
@@ -15584,8 +15757,46 @@ const UI = {
     row('&#9679;', '#8A7260',
       `温存 <b>${me.stanceCounts.onzon}</b>　強気 <b>${me.stanceCounts.tsuyoki}</b>　全力 <b>${me.stanceCounts.zenryoku}</b>`);
   },
+  /* 盤面は毎回まるごと組み直しているので、そのままだと札が瞬間移動して見える。
+     組み直す前の位置を覚えておき、新しい位置へ滑らせる（FLIP）。 */
+  FLIP_ZONES: ['#handMe', '#boardMe', '#boardOpp', '#oppHand'],
+  flipCapture() {
+    if (ReduceMotion) return null;
+    const map = new Map();
+    this.FLIP_ZONES.forEach(sel => {
+      const root = $(sel); if (!root) return;
+      root.querySelectorAll('[data-uid]').forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (r.width) map.set(n.dataset.uid, { x: r.left, y: r.top });
+      });
+    });
+    return map;
+  },
+  flipPlay(map) {
+    if (!map) return;
+    this.FLIP_ZONES.forEach(sel => {
+      const root = $(sel); if (!root) return;
+      root.querySelectorAll('[data-uid]').forEach(n => {
+        const r = n.getBoundingClientRect();
+        if (!r.width) return;
+        const old = map.get(n.dataset.uid);
+        if (!old) { n.classList.add('justin'); return; }    // 新しく出てきた札はふわっと出す
+        const dx = old.x - r.left, dy = old.y - r.top;
+        if (Math.abs(dx) < 1.5 && Math.abs(dy) < 1.5) return;
+        n.style.transition = 'none';
+        n.style.transform = `translate(${dx}px, ${dy}px)`;
+        requestAnimationFrame(() => {
+          n.style.transition = 'transform .18s cubic-bezier(.22,.7,.3,1)';
+          n.style.transform = '';
+          setTimeout(() => { n.style.transition = ''; }, 220);
+        });
+      });
+    });
+  },
+
   renderBattle() {
     if (!G || G.sim) return;
+    const flip = this.flipCapture();
     const vi = viewIdx();                                  // PvEでは自分側に視点を固定する
     const me = G.players[vi], opp = G.players[1 - vi];
     const pd = G.pending;
@@ -15689,6 +15900,7 @@ const UI = {
     $('#endTurn').disabled = G.phase !== 'play' || G.busy || !!pd || !!G.aiBusy;
     /* EvEは人間が押すものが無いので、押せないことが分かる字にしておく */
     $('#endTurn').textContent = G.mode === 'eve' ? 'AI 進行中' : 'TURN END';
+    this.flipPlay(flip);
   },
   slot(i) { const s = el('div', 'slot', '&#43;'); s.dataset.zone = 'slot'; s.dataset.slot = i; return s; },
 
@@ -16457,6 +16669,10 @@ function initEvents() {
     FormatVerFilter = b.dataset.fmtVer; Sfx.play('click'); UI.renderFormat();
   });
   /* ---- 戦績 ---- */
+  $('#updateList').addEventListener('click', e => {
+    const b = e.target.closest('[data-upd-card]'); if (!b) return;
+    Sfx.play('chime'); UI.showDetail(b.dataset.updCard);
+  });
   $('#recTabs').addEventListener('click', e => {
     const b = e.target.closest('[data-rec-tab]'); if (!b) return;
     RecTab = b.dataset.recTab; UI.renderRecord(); Sfx.play('click');
