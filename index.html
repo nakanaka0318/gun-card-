@@ -13347,6 +13347,13 @@ const UPDATES = [
               + '演出が先に終わっても読み終わるまで止めない。効果音を切っているときは読まない。'
               + '読み上げを持たない端末では、これまで通り文字だけが出る。',
             why: '「言う」＝声に出すという意味だったため。' },
+          { kind: 'new', name: '登場演出をさらに21種追加',
+            text: 'エニグマ・フォーメーション・アクセルのレジェンドを中心に、双翼の翼・アズヴォルト・ギルネリーぜ・'
+              + 'アンドロメダ・ゲテンオウ・ミロク・神の召喚・ギルダリア・ティア・マガチヨ・クルル・ルオー・'
+              + 'オクトリス・フォルテ・バーンドナイト・ガルミーユ・ユエル&ソシエ・ウィルナス・ユウベに専用の演出を付けた。'
+              + 'ver8の「声」の6枚（ミク・リン・レン・MEIKO・ルカ・KAITO）は全員共通の「歌声」、'
+              + '氷界と炎界の鹿王は共通の「角枝」。合計で90種・106枚になった。',
+            why: '演出を持つ顔ぶれをさらに増やすため。' },
           { kind: 'new', name: '登場演出を26種追加',
             text: '天晶の深淵・真理の逆転・カットスロート・マゼルベイン・ガブリエル・アリス・ササニド・ダストデイズ・'
               + 'マーズ・バルバロス・リュミオール・ロデオ・アンテマリア・ロードノエル・シャムナクア・イステンデッド・'
@@ -13779,8 +13786,9 @@ const EFX_PARTS = {
   },
   /* 左右に開く翼 */
   wing(st, o) {
-    efxAdd(st, 'e-wing', { d: (o.d || 860) + 'ms', oy: (o.oy || 42) + '%' });
-    if (!o.half) efxAdd(st, 'e-wing r', { d: (o.d || 860) + 'ms', oy: (o.oy || 42) + '%' });
+    const v = { d: (o.d || 860) + 'ms', oy: (o.oy || 42) + '%' };
+    if (o.side !== 'r') efxAdd(st, 'e-wing', v);                   // 左の翼
+    if (o.side !== 'l' && !o.half) efxAdd(st, 'e-wing r', v);      // 右の翼
   },
   /* 転がる骰子。pips で出た目を決める */
   die(st, o) {
@@ -14305,6 +14313,181 @@ const ENTRY_FX = {
     parts: [['veil', { d: 1250 }], ['rain', { n: 34, a: 86, d: 860, gap: 22, h: 130, len: 150 }],
       ['swirl', { d: 1200, spin: 560, sz: 46 }], ['slash', { n: 4, angles: [-8, 4, -3, 7], gap: 140, bw: 3, dl: 200, d: 560 }]]
   },
+  /* ---- 双翼の翼：片翼は守りに、片翼は裁きに ---- */
+  splitwing: {
+    name: '分翼', kana: 'TWO PATHS', ck: 'rgba(206,196,214,.8)', ck2: 'rgba(252,250,255,.96)', bg: 'rgba(8,8,12,.86)',
+    ms: 1250, shake: 2, sfx: 'chime',
+    parts: [['split', { d: 1230 }],
+      ['wing', { side: 'l', d: 1000, oy: 44, ck: 'rgba(132,186,228,.82)', ck2: 'rgba(236,248,255,.96)' }],
+      ['wing', { side: 'r', d: 1000, oy: 44, ck: 'rgba(222,96,88,.82)', ck2: 'rgba(255,234,230,.96)' }],
+      ['ring', { n: 2, gap: 190, bw: 3, d: 980 }], ['feather', { n: 10, dl: 340, d: 1150 }]]
+  },
+  /* ---- 混沌の監獄・アズヴォルト：七つの鍵が揃うと檻は内から砕ける ---- */
+  prison: {
+    name: '監獄', kana: 'PRISON', ck: 'rgba(148,136,172,.8)', ck2: 'rgba(238,234,250,.94)', bg: 'rgba(6,5,10,.9)',
+    ms: 1350, shake: 3, sfx: 'rumble',
+    parts: [['veil', { d: 1350 }], ['wall', { n: 7, gap: 48, d: 900, h: 72, hmin: 68, w: 16 }],
+      ['digit', { seq: ['1', '3', '5', '7'], d: 1050, sz: 52, oy: 30 }],
+      ['chain', { n: 10, dl: 300, d: 1000, r: 96 }], ['shard', { n: 16, dl: 620, d: 760, len: 34 }]]
+  },
+  /* ---- 干絶の顕現・ギルネリーぜ：残りの水気を全部抱えていった ---- */
+  drought: {
+    name: '干絶', kana: 'DROUGHT', ck: 'rgba(206,172,110,.8)', ck2: 'rgba(252,240,206,.94)', bg: 'rgba(16,11,5,.88)',
+    ms: 1300, shake: 1, sfx: 'vanish',
+    parts: [['veil', { d: 1300 }], ['tide', { d: 1000, ck: 'rgba(96,150,186,.62)' }],
+      ['grid', { d: 1250, cell: 68, oy: 34 }],
+      ['slash', { n: 7, angles: [-78, -48, -20, 6, 34, 62, 88], gap: 70, bw: 5, dl: 220, d: 760 }],
+      ['mote', { n: 24, dir: 'in', d: 1200 }], ['smoke', { n: 6, dl: 400, d: 1050, ymin: 58 }]]
+  },
+  /* ---- アンドロメダ：鎖に繋がれた乙女は星座になって自由を知った ---- */
+  constellation: {
+    name: '星座', kana: 'ANDROMEDA', ck: 'rgba(152,170,226,.78)', ck2: 'rgba(244,248,255,.96)', bg: 'rgba(3,4,12,.9)',
+    ms: 1400, shake: 1, sfx: 'chime',
+    parts: [['veil', { d: 1400 }], ['chain', { n: 8, d: 950, r: 86, sz: 28 }],
+      ['mote', { n: 26, dir: 'out', d: 1300 }], ['thread', { n: 9, dl: 420, d: 1000, len: 30, gap: 50 }],
+      ['star', { n: 4, gap: 110, dl: 560, d: 780, sz: 86 }]]
+  },
+  /* ---- 八界花・ゲテンオウ：手のなかを空にして八つの界を咲かせる ---- */
+  eightrealms: {
+    name: '八界', kana: 'EIGHT REALMS', ck: 'rgba(188,222,168,.78)', ck2: 'rgba(244,255,236,.95)', bg: 'rgba(6,12,6,.86)',
+    ms: 1400, shake: 1, sfx: 'summon',
+    parts: [['veil', { d: 1400 }], ['plate', { n: 14, d: 900, gap: 44 }],
+      ['ray', { n: 8, dl: 360, d: 900, len: 46 }], ['petal', { n: 18, dir: 'up', dl: 300, d: 1150, sz: 14 }],
+      ['glyph', { t: '八界', n: 2, r: -104, sz: 26, d: 1100, dl: 480, oy: 62 }]]
+  },
+  /* ---- 虫風花・ミロク：羽音が風を呼び、風が花を咲かせる ---- */
+  wingbeat: {
+    name: '虫風', kana: 'WINGBEAT', ck: 'rgba(186,208,142,.78)', ck2: 'rgba(246,255,228,.94)', bg: 'rgba(8,11,5,.84)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['swirl', { d: 1250, spin: 560, sz: 62 }],
+      ['swirl', { rev: true, d: 1200, spin: 400, sz: 38, dl: 140 }],
+      ['mote', { n: 30, dir: 'out', d: 1250 }], ['petal', { n: 18, dir: 'up', dl: 320, d: 1150, sz: 13 }],
+      ['ring', { n: 3, gap: 150, bw: 2, to: 4, d: 1050 }]]
+  },
+  /* ---- 神の召喚：応えたものに手加減はない ---- */
+  godcall: {
+    name: '神召', kana: 'SUMMON GOD', ck: 'rgba(255,238,176,.88)', ck2: 'rgba(255,255,248,.99)', bg: 'rgba(10,9,4,.9)',
+    ms: 1500, shake: 3, sfx: 'super', big: true,
+    parts: [['veil', { d: 1500 }], ['beam', { d: 1250, w: 260 }],
+      ['ray', { n: 18, dl: 260, d: 1000, len: 58, gap: 18 }],
+      ['digit', { seq: ['1', '10', '100'], d: 1200, sz: 76, oy: 30 }],
+      ['pulse', { n: 3, gap: 230, dl: 420 }], ['mote', { n: 20, dir: 'up', d: 1350 }]]
+  },
+  /* ---- ver8の声の面々（6枚とも）：声そのものが形になる ---- */
+  thevoices: {
+    name: '歌声', kana: 'THE VOICES', ck: 'rgba(146,224,214,.8)', ck2: 'rgba(238,255,252,.96)', bg: 'rgba(4,12,13,.86)',
+    ms: 1350, shake: 1, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['beam', { n: 7, gap: 55, d: 1050, w: 34 }],
+      ['beat', { d: 1250, sz: 112 }], ['ring', { n: 5, gap: 95, bw: 2, to: 6, d: 1000 }],
+      ['glyph', { t: '♪♫♩♬', n: 8, r: -124, sz: 22, spin: 160, d: 1200 }]]
+  },
+  /* ---- 統音のアナテマ・ギルダリア：号令は音程で決まる ---- */
+  conduct: {
+    name: '統音', kana: 'CONDUCT', ck: 'rgba(212,186,232,.78)', ck2: 'rgba(250,242,255,.95)', bg: 'rgba(8,6,12,.86)',
+    ms: 1250, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1250 }], ['beam', { n: 5, gap: 70, d: 1050, w: 44 }],
+      ['slash', { n: 3, angles: [-18, 14, -4], gap: 190, bw: 3, d: 620 }],
+      ['wall', { n: 6, dl: 120, gap: 58, d: 1000, h: 34, hmin: 22, w: 34 }],
+      ['ring', { n: 4, gap: 110, bw: 3, to: 4, d: 1100 }], ['mote', { n: 18, dir: 'out', d: 1150 }]]
+  },
+  /* ---- エターナルクリスタリア・ティア：結晶は砕けない、時々ひとつ増える ---- */
+  crystalia: {
+    name: '結晶', kana: 'CRYSTALIA', ck: 'rgba(164,214,236,.78)', ck2: 'rgba(242,252,255,.96)', bg: 'rgba(4,9,14,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['ring', { n: 4, hex: true, gap: 120, bw: 3, sz: 130, to: 2.8, d: 1050 }],
+      ['tile', { n: 7, dl: 260, d: 820, gap: 90, sz: 42 }],
+      ['mote', { n: 16, dir: 'out', d: 1150 }], ['star', { n: 2, gap: 150, dl: 520, d: 760, sz: 86 }]]
+  },
+  /* ---- 煙管の咎人・マガチヨ：三服目の煙で灰皿の数が合わなくなる ---- */
+  thirddrag: {
+    name: '三服', kana: 'THIRD DRAG', ck: 'rgba(196,166,138,.78)', ck2: 'rgba(250,240,228,.94)', bg: 'rgba(12,9,7,.88)',
+    ms: 1250, shake: 1, sfx: 'vanish',
+    parts: [['veil', { d: 1250 }], ['smoke', { n: 9, d: 1200, gap: 90, ymin: 50 }],
+      ['ring', { n: 3, gap: 200, bw: 2, to: 3, d: 1000 }],
+      ['digit', { seq: ['1', '2', '3'], d: 1100, sz: 68, oy: 32 }],
+      ['mote', { n: 14, dir: 'up', d: 1150 }]]
+  },
+  /* ---- 鹿王（氷界・炎界とも）：角の先から枝が伸びる ---- */
+  antlers: {
+    name: '角枝', kana: 'ANTLERS', ck: 'rgba(176,206,210,.78)', ck2: 'rgba(242,252,252,.94)', bg: 'rgba(6,10,11,.86)',
+    ms: 1300, shake: 2, sfx: 'rumble',
+    parts: [['veil', { d: 1300 }], ['thorn', { n: 11, gap: 58, d: 1000, h: 58, w: 7 }],
+      ['shard', { n: 10, dl: 420, d: 820, len: 24, sz: 18 }],
+      ['ring', { n: 2, gap: 200, dl: 380, d: 950 }], ['mote', { n: 14, dir: 'up', d: 1150 }]]
+  },
+  /* ---- 不殺の関係・クルル：撃たないと決めた指が一番速い ---- */
+  nokill: {
+    name: '不殺', kana: 'NO KILL', ck: 'rgba(222,196,142,.8)', ck2: 'rgba(255,248,230,.96)', bg: 'rgba(10,8,5,.88)',
+    ms: 1100, shake: 2, sfx: 'shot',
+    parts: [['veil', { d: 1100 }], ['slash', { n: 1, a: -8, bw: 7, d: 360 }],
+      ['hole', { n: 5, dl: 260, d: 780, gap: 80 }],
+      ['ring', { n: 3, rev: true, gap: 120, dl: 320, d: 860 }], ['pulse', { dl: 620 }]]
+  },
+  /* ---- 光の理・ルオー：積み上げた歩みの数だけ光が濃くなる ---- */
+  lawoflight: {
+    name: '光理', kana: 'LAW OF LIGHT', ck: 'rgba(252,236,182,.84)', ck2: 'rgba(255,253,240,.98)', bg: 'rgba(10,9,6,.86)',
+    ms: 1300, shake: 1, sfx: 'summon',
+    parts: [['veil', { d: 1300 }], ['grid', { d: 1250, cell: 42 }],
+      ['beam', { n: 5, gap: 90, d: 1050, w: 56 }], ['sun', { d: 1200, sz: 28, by: 14 }],
+      ['ray', { n: 10, dl: 480, d: 860, len: 46 }]]
+  },
+  /* ---- 空絶の顕現・オクトリス：空になることが完成だった ---- */
+  emptied: {
+    name: '空絶', kana: 'EMPTIED', ck: 'rgba(188,196,212,.76)', ck2: 'rgba(248,251,255,.94)', bg: 'rgba(7,8,11,.88)',
+    ms: 1300, shake: 1, sfx: 'vanish',
+    parts: [['veil', { d: 1300 }], ['plate', { n: 20, d: 1000, gap: 40 }],
+      ['iris', { out: true, dl: 380, d: 900 }], ['mote', { n: 20, dir: 'out', d: 1200 }],
+      ['ring', { n: 2, gap: 210, bw: 1, d: 980 }]]
+  },
+  /* ---- 黒き龍翼・フォルテ：影が差した時にはもう決着している ---- */
+  blackwing: {
+    name: '龍影', kana: 'BLACK WING', ck: 'rgba(122,106,146,.78)', ck2: 'rgba(226,218,240,.92)', bg: 'rgba(3,3,7,.92)',
+    ms: 1200, shake: 3, sfx: 'rumble',
+    parts: [['curtain', { d: 1180 }], ['wing', { d: 950, oy: 40 }],
+      ['slash', { n: 2, angles: [-14, 10], gap: 130, bw: 5, dl: 340, d: 460 }],
+      ['rain', { n: 16, a: 96, d: 700, gap: 34, len: 130 }], ['pulse', { dl: 700 }]]
+  },
+  /* ---- 灼灰のアナテマ・バーンドナイト：灰になっても鎧の形は残った ---- */
+  ashknight: {
+    name: '灼灰', kana: 'ASH KNIGHT', ck: 'rgba(206,122,82,.8)', ck2: 'rgba(252,232,206,.94)', bg: 'rgba(12,8,6,.88)',
+    ms: 1300, shake: 2, sfx: 'rumble',
+    parts: [['veil', { d: 1300 }], ['wall', { n: 3, gap: 110, d: 1100, h: 60, hmin: 50, w: 78 }],
+      ['flame', { n: 3, dl: 240, d: 1000, h: 28, hmin: 18 }],
+      ['mote', { n: 28, dir: 'down', d: 1250 }], ['smoke', { n: 3, dl: 480, d: 1050, ymin: 66 }],
+      ['ring', { n: 2, gap: 200, dl: 360, bw: 3, d: 980 }]]
+  },
+  /* ---- 烈絶の顕現・ガルミーユ：現れた場所から順に荒野が灰になる ---- */
+  scorch: {
+    name: '烈絶', kana: 'SCORCH', ck: 'rgba(248,122,54,.84)', ck2: 'rgba(255,238,192,.96)', bg: 'rgba(14,5,2,.88)',
+    ms: 1250, shake: 3, sfx: 'shot',
+    parts: [['veil', { d: 1250 }], ['ring', { n: 4, gap: 140, bw: 9, to: 5, d: 1200 }],
+      ['flame', { n: 5, dl: 140, gap: 90, d: 1100, h: 46 }],
+      ['smoke', { n: 4, dl: 420, d: 1100, ymin: 58 }], ['mote', { n: 20, dir: 'out', d: 1150 }]]
+  },
+  /* ---- 調和の舞手・ユエル&ソシエ：二人の足音が揃った拍で砂まで踊る ---- */
+  duetdance: {
+    name: '調舞', kana: 'DUET DANCE', ck: 'rgba(234,172,140,.8)', ck2: 'rgba(255,244,234,.96)', bg: 'rgba(10,7,6,.84)',
+    ms: 1350, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['orb', { n: 6, d: 1250, r: 15, sz: 12 }],
+      ['orb', { n: 6, d: 1250, r: 23, sz: 10, dl: 120 }],
+      ['beat', { n: 2, gap: 200, d: 1200, sz: 74 }], ['petal', { n: 16, dir: 'up', dl: 300, d: 1200, sz: 13 }]]
+  },
+  /* ---- 炎の理・ウィルナス：睨まれた側は逃げ道まで焼かれる ---- */
+  lawofflame: {
+    name: '炎理', kana: 'LAW OF FLAME', ck: 'rgba(240,112,56,.84)', ck2: 'rgba(255,234,186,.96)', bg: 'rgba(14,4,2,.9)',
+    ms: 1300, shake: 2, sfx: 'rumble',
+    parts: [['veil', { d: 1300 }], ['eye', { d: 1250 }],
+      ['ray', { n: 10, dl: 340, d: 900, len: 48 }], ['flame', { n: 3, dl: 240, d: 1000, h: 34 }],
+      ['hole', { n: 4, dl: 520, d: 760, gap: 90, sz: 46 }]]
+  },
+  /* ---- 波揺花・ユウベ：拾い上げた物の形で咲き方を変える ---- */
+  wavebloom: {
+    name: '波花', kana: 'WAVE BLOOM', ck: 'rgba(126,196,216,.78)', ck2: 'rgba(238,252,255,.95)', bg: 'rgba(4,11,15,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['tide', { d: 1200 }], ['bub', { n: 14, d: 1200, gap: 66, sz: 24 }],
+      ['plate', { n: 8, dl: 280, d: 950, gap: 70, w: 38 }],
+      ['petal', { n: 16, dir: 'up', dl: 360, d: 1150, sz: 13 }]]
+  },
   /* ---- 天晶の深淵：淵の底から結晶の手が伸びる ---- */
   deephand: {
     name: '淵手', kana: 'HANDS OF THE DEEP', ck: 'rgba(126,186,222,.78)', ck2: 'rgba(230,248,255,.95)', bg: 'rgba(2,8,16,.9)',
@@ -14553,7 +14736,18 @@ const ENTRY_FX_OF = {
   marwin_001: 'despair', hanged_001: 'hanged', rehanged_001: 'hanged',
   wilbert_001: 'twinshield', libelta_001: 'forbidden',
   laramia_001: 'extend', orchis_001: 'twohearts', symphonia_001: 'twohearts',
-  gilzael_001: 'wailshot', eyesden_001: 'wailshot', unkei_001: 'gildbloom'
+  gilzael_001: 'wailshot', eyesden_001: 'wailshot', unkei_001: 'gildbloom',
+  /* ---- エニグマ・フォーメーション・アクセルのレジェンド ---- */
+  twinwings_001: 'splitwing', azvolt_001: 'prison', gilnerize_001: 'drought',
+  andromeda_001: 'constellation', getenou_001: 'eightrealms', miroku_001: 'wingbeat', god_001: 'godcall',
+  /* ver8 の声の面々は6枚とも同じ演出 */
+  mirainokoe_001: 'thevoices', kagaminerin_001: 'thevoices', meiko_001: 'thevoices',
+  megurineluka_001: 'thevoices', kagaminelen_001: 'thevoices', kaito_001: 'thevoices',
+  gildaria_001: 'conduct', tia_001: 'crystalia', magachiyo_001: 'thirddrag',
+  icedeer_001: 'antlers', flamedeer_001: 'antlers',
+  kururu_001: 'nokill', ruoh_001: 'lawoflight', octrice_001: 'emptied',
+  forte_001: 'blackwing', burnedknight_001: 'ashknight', garmille_001: 'scorch',
+  yuelsocie_001: 'duetdance', wilnas_001: 'lawofflame', yube_001: 'wavebloom'
 };
 const entryFxOf = cardId => ENTRY_FX[ENTRY_FX_OF[cardId]] ? ENTRY_FX_OF[cardId] : null;
 
