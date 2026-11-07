@@ -13647,6 +13647,8 @@ async function runMatchupAnalysis(games, onProgress, ver) {
    外から音源を持ってこないので、声が無い端末では黙って飛ばす。
    演出が終わっても読み終わるまで止めない（最後まで読ませる）。 */
 const Voice = {
+  RATE: 1.45,          /* 読む速さ（1が端末の標準）。演出に対して間延びしないところ */
+  VOL: .5,             /* 声の大きさ。効果音や音楽に被らないよう控えめにする */
   ja: null, picked: false,
   init() {
     if (!window.speechSynthesis) return;
@@ -13668,7 +13670,7 @@ const Voice = {
       const u = new SpeechSynthesisUtterance(text);
       if (this.ja) u.voice = this.ja;
       u.lang = (this.ja && this.ja.lang) || 'ja-JP';
-      u.rate = .98; u.pitch = 1; u.volume = 1;
+      u.rate = Voice.RATE; u.pitch = 1; u.volume = Voice.VOL;
       speechSynthesis.speak(u);        /* 演出が終わっても止めない */
       return true;
     } catch (e) { return false; }      /* 読み上げができない端末では黙って飛ばす */
