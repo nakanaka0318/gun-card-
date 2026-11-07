@@ -144,6 +144,14 @@ mypattern: {
 ENTRY_FX_OF.mycard_001 = 'mypattern';
 ```
 
+どの演出にも、書かなくても次のものが自動で付きます。
+
+- **下地**（`.e-scrim`）と**上下の黒帯**（`.e-bar`）、**画面が寄る動き**（`eZoom`）
+- **名札**（`.e-name`）
+- **見せ場** — 札が出る瞬間の**白閃**（`.e-blast`）・**衝撃波**（`.e-impact`）・**集中線14本**（`.e-speed`）・
+  札の後ろの**光輪**（`.e-halo`）・**強い揺れ**（`.shake.hard`）
+
+光りものの部品は `mix-blend-mode:screen` なので、重なるほど明るく灼けます。
 部品の指定に `ck` / `ck2` を書くと、**その部品だけ色を変えられます**（双極の炎と水がこれです）。
 演出そのものは `FX.entry(cardId, destSel)`、一覧からの見本は `FX.playEntry(key, cardId, dest, shakeSel)` が流します。
 どの演出にも、自動で**下地（`.e-scrim`）**と**名札（`.e-name`）**が付きます。

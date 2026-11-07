@@ -586,6 +586,11 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 @keyframes fxBan{0%{opacity:0; transform:scale(1.25)} 18%,72%{opacity:1; transform:scale(1)} 100%{opacity:0; transform:scale(.97)}}
 .shake{animation:shake .28s}
 @keyframes shake{0%,100%{transform:translate(0)} 25%{transform:translate(-4px,2px)} 50%{transform:translate(4px,-2px)} 75%{transform:translate(-2px,-1px)}}
+.shake.hard{animation:shakeHard .4s cubic-bezier(.3,.7,.3,1)}
+@keyframes shakeHard{0%{transform:translate(0) rotate(0)} 12%{transform:translate(-11px,6px) rotate(-.7deg)}
+  28%{transform:translate(10px,-7px) rotate(.6deg)} 44%{transform:translate(-8px,-4px) rotate(-.45deg)}
+  60%{transform:translate(6px,5px) rotate(.3deg)} 78%{transform:translate(-3px,-2px) rotate(-.15deg)}
+  100%{transform:translate(0) rotate(0)}}
 /* ---- 特殊な登場の演出（普通にプレイしたとき以外） ---- */
 .fx-cast{position:absolute; left:50%; top:42%; display:flex; flex-direction:column; align-items:center; gap:9px;
   transform:translate(-50%,-50%); will-change:transform,opacity}
@@ -659,13 +664,61 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
    部品はすべて「画面いっぱいの入れ物（.efx）」の中に絶対位置で置く。
    色は --ck（主色）／--ck2（副色）／--bg（背景の沈み）で差し替える。 */
 .efx{position:absolute; inset:0; overflow:hidden;
-  --ck:rgba(232,193,130,.72); --ck2:rgba(255,245,220,.9); --bg:rgba(10,8,14,.72)}
+  --ck:rgba(232,193,130,.72); --ck2:rgba(255,245,220,.9); --bg:rgba(10,8,14,.72);
+  animation:eZoom var(--d,1200ms) cubic-bezier(.18,.72,.3,1) both}
+/* 画面が少しずつ寄る（カメラが近づくような感じ） */
+@keyframes eZoom{0%{transform:scale(1.14)}10%{transform:scale(1.05)}100%{transform:scale(1)}}
+/* 光りものは重なるほど明るく灼ける */
+.e-pulse,.e-ray,.e-beam,.e-star,.e-mote,.e-flame,.e-bolt,.e-slash,.e-orb,.e-lance,.e-coin,.e-bub,
+.e-impact,.e-blast,.e-speed,.e-sun,.e-swirl{mix-blend-mode:screen}
+.e-sun.dark{mix-blend-mode:normal}
 .efx>*{position:absolute; will-change:transform,opacity; pointer-events:none}
 /* 下地：どの演出でも画面をいちど沈めて、演出そのものを読みやすくする */
 .efx-sub{inset:0}
 .efx-sub>*{position:absolute; will-change:transform,opacity; pointer-events:none}
 .e-scrim{inset:0; background:rgba(5,4,8,.96); animation:eScrim var(--d,1200ms) ease-out both}
-@keyframes eScrim{0%{opacity:0}9%{opacity:1}84%{opacity:1}100%{opacity:0}}
+@keyframes eScrim{0%{opacity:0}8%{opacity:1}88%{opacity:1}100%{opacity:0}}
+
+/* 黒帯：映画の一場面のように画面を細める */
+.e-bar{left:-10%; right:-10%; height:8.5%; background:#000; z-index:5;
+  box-shadow:0 0 22px rgba(0,0,0,.9)}
+.e-bar.t{top:0; animation:eBarT var(--d,1200ms) cubic-bezier(.2,1,.3,1) both}
+.e-bar.b{bottom:0; animation:eBarB var(--d,1200ms) cubic-bezier(.2,1,.3,1) both}
+@keyframes eBarT{0%{transform:translateY(-100%)}10%{transform:translateY(0)}
+  90%{transform:translateY(0)}100%{transform:translateY(-100%)}}
+@keyframes eBarB{0%{transform:translateY(100%)}10%{transform:translateY(0)}
+  90%{transform:translateY(0)}100%{transform:translateY(100%)}}
+
+/* 衝撃波：札が出る瞬間に輪が走る */
+.e-impact{left:50%; top:50%; width:44px; height:44px; margin:-22px 0 0 -22px; border-radius:50%;
+  border:7px solid var(--ck2); box-shadow:0 0 60px var(--ck2), inset 0 0 30px var(--ck2); z-index:4;
+  animation:eImpact 560ms cubic-bezier(.08,.9,.2,1) both}
+@keyframes eImpact{0%{opacity:0; transform:scale(.2)}14%{opacity:1; border-width:7px}
+  100%{opacity:0; transform:scale(16); border-width:1px}}
+
+/* 白閃：同じ瞬間に画面が灼ける */
+.e-blast{inset:0; z-index:4;
+  background:radial-gradient(64% 46% at 50% 50%, #fff 0%, var(--ck2) 26%, var(--ck) 48%, transparent 72%);
+  animation:eBlast 460ms ease-out both}
+@keyframes eBlast{0%{opacity:0; transform:scale(.6)}10%{opacity:1; transform:scale(1)}
+  100%{opacity:0; transform:scale(1.45)}}
+
+/* 札の後ろの光輪 */
+.e-halo{left:50%; top:50%; width:46vmin; height:46vmin; margin:-23vmin 0 0 -23vmin; z-index:5;
+  border-radius:50%; background:radial-gradient(circle, var(--ck2) 0%, var(--ck) 34%, transparent 68%);
+  mix-blend-mode:screen; filter:blur(6px);
+  animation:eHalo 900ms cubic-bezier(.2,.9,.3,1) both}
+@keyframes eHalo{0%{opacity:0; transform:scale(.3)}16%{opacity:1; transform:scale(1.14)}
+  38%{opacity:.78; transform:scale(1)}70%{opacity:.86; transform:scale(1.06)}
+  100%{opacity:0; transform:scale(1.18)}}
+
+/* 集中線：外から札へ吸い寄せられる筋 */
+.e-speed{left:50%; top:50%; width:var(--len,26vmax); height:var(--bw,3px); margin-top:-1.5px; z-index:4;
+  background:linear-gradient(to right, transparent, var(--ck2)); transform-origin:0 50%;
+  animation:eSpeed 560ms cubic-bezier(.25,.9,.2,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eSpeed{0%{opacity:0; transform:rotate(var(--a,0deg)) translateX(56vmax) scaleX(.25)}
+  26%{opacity:1}
+  100%{opacity:0; transform:rotate(var(--a,0deg)) translateX(5vmax) scaleX(1)}}
 
 /* 幕：画面全体の色の沈み */
 .e-veil{inset:0; background:radial-gradient(120% 92% at 50% 44%, var(--ck) 0%, transparent 56%), linear-gradient(var(--bg), var(--bg));
@@ -1038,20 +1091,26 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   100%{opacity:0; transform:rotate(var(--a,0deg)) translateX(calc(var(--r,0px) * 1.9)) rotate(220deg) scale(.7)}}
 
 /* 演出の名札（画面上の見出し） */
-.e-name{z-index:4; left:50%; top:9%; transform:translateX(-50%); text-align:center; white-space:nowrap;
+.e-name{z-index:7; left:50%; top:15%; transform:translateX(-50%); text-align:center; white-space:nowrap;
+  padding:6px 26px 8px; border-radius:4px;
+  background:linear-gradient(90deg, transparent, rgba(0,0,0,.62) 16%, rgba(0,0,0,.72) 50%, rgba(0,0,0,.62) 84%, transparent);
   animation:eName var(--d,1000ms) ease-out both}
-.e-name i{display:block; font-style:normal; font-family:var(--f-display); font-size:19px; font-weight:700;
-  color:var(--ck2); letter-spacing:.3em; text-shadow:0 0 16px var(--ck), 0 2px 0 rgba(0,0,0,.6)}
-.e-name s{display:block; text-decoration:none; font-family:var(--f-type); font-size:9px;
-  color:var(--ck2); opacity:.78; letter-spacing:.34em; margin-top:5px}
-@keyframes eName{0%{opacity:0; transform:translateX(-50%) translateY(10px)}
-  22%{opacity:1; transform:translateX(-50%) translateY(0)}
-  76%{opacity:1}100%{opacity:0; transform:translateX(-50%) translateY(-8px)}}
+.e-name i{display:block; font-style:normal; font-family:var(--f-display); font-size:25px; font-weight:700;
+  color:#FFF9EC; letter-spacing:.34em;
+  text-shadow:0 0 6px var(--ck2), 0 0 20px var(--ck), 0 2px 4px rgba(0,0,0,.95)}
+.e-name s{display:block; text-decoration:none; font-family:var(--f-type); font-size:9.5px;
+  color:var(--ck2); opacity:.9; letter-spacing:.38em; margin-top:6px; text-shadow:0 1px 3px rgba(0,0,0,.9)}
+@keyframes eName{0%{opacity:0; transform:translateX(-50%) translateY(16px) scale(1.4); filter:blur(8px)}
+  16%{opacity:1; transform:translateX(-50%) translateY(0) scale(1); filter:blur(0)}
+  88%{opacity:1; transform:translateX(-50%) translateY(0) scale(1)}
+  100%{opacity:0; transform:translateX(-50%) translateY(-10px) scale(1.06); filter:blur(3px)}}
 
 /* 演出の最後に出るカード */
-.e-card{left:50%; top:46%; transform:translate(-50%,-50%); z-index:3; filter:drop-shadow(0 10px 26px rgba(0,0,0,.6))}
-.e-card .card{width:104px; height:146px}
-.e-card.big .card{width:132px; height:186px}
+.e-card{left:50%; top:50%; transform:translate(-50%,-50%); z-index:6;
+  filter:drop-shadow(0 14px 34px rgba(0,0,0,.8)) drop-shadow(0 0 26px var(--ck))}
+.e-card .card{width:132px; height:186px}
+.e-card.big .card{width:160px; height:226px}
+@media (max-height:620px){ .e-card .card{width:112px; height:158px} .e-card.big .card{width:132px; height:186px} }
 
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important}
@@ -13196,6 +13255,10 @@ const UPDATES = [
             text: '47枚のカードに43種類の専用演出を付けた。演出はカードが場に出る前に流れ、終わってから場に出る。'
               + 'スペルの場合は効果が働く前に流れる。同じ札を続けて出したときは、2枚目以降の演出を省いてテンポを保つ。',
             why: '強い札が出てくる瞬間に重みを持たせるため。' },
+          { kind: 'new', name: '登場演出の見せ場',
+            text: 'どの演出にも、札が出る瞬間に白閃・衝撃波・集中線・強い揺れがまとめて入るようにした。'
+              + '合わせて画面が寄る動き、上下の黒帯、光りものの加算合成を足し、色を全体に濃くした。札そのものも大きく出る。',
+            why: '演出が地味だったため。' },
           { kind: 'new', name: 'ENTRY FX（演出一覧）',
             text: 'ホームから開ける新しいページ。43種の演出を並べ、押すとその演出だけを見られる。「続けて再生」で全部を順に流せる。',
             why: '演出をまとめて見比べられるようにするため。' },
@@ -13759,14 +13822,14 @@ const EFX_PARTS = {
 const ENTRY_FX = {
   /* ---- 最果ての王・サタン：世界が終わる ---- */
   doom: {
-    name: '終焉', kana: 'DOOM', ck: 'rgba(206,64,46,.62)', ck2: 'rgba(255,214,180,.95)', bg: 'rgba(14,2,4,.9)',
+    name: '終焉', kana: 'DOOM', ck: 'rgba(222,69,50,0.9)', ck2: 'rgba(255,231,194,1)', bg: 'rgba(14,2,4,.9)',
     ms: 1500, shake: 3, sfx: 'lose', big: true,
     parts: [['veil', { d: 1500 }], ['iris', { d: 1300 }], ['ring', { n: 4, gap: 150, bw: 3, to: 7, d: 1100 }],
       ['mote', { n: 22, dir: 'up', d: 1400 }], ['pulse', { n: 2, gap: 420, dl: 300 }]]
   },
   /* ---- アポカリプス配下・カルギデンスラ：何もないところから湧く ---- */
   void: {
-    name: '虚無', kana: 'VOID', ck: 'rgba(120,96,170,.5)', ck2: 'rgba(222,206,255,.9)', bg: 'rgba(6,4,12,.86)',
+    name: '虚無', kana: 'VOID', ck: 'rgba(130,104,184,0.78)', ck2: 'rgba(240,222,255,0.95)', bg: 'rgba(6,4,12,.86)',
     ms: 1200, sfx: 'vanish',
     parts: [['veil', { d: 1200 }], ['swirl', { rev: true, d: 1200, spin: 560, sz: 72 }],
       ['mote', { n: 20, dir: 'in', d: 1050 }], ['ring', { n: 3, rev: true, gap: 150, bw: 3, d: 1000 }],
@@ -13774,98 +13837,98 @@ const ENTRY_FX = {
   },
   /* ---- 竜血の咆哮・アルビオンバハムート：空が裂ける ---- */
   rift: {
-    name: '断裂', kana: 'RIFT', ck: 'rgba(224,138,70,.56)', ck2: 'rgba(255,236,196,.95)', bg: 'rgba(10,6,10,.88)',
+    name: '断裂', kana: 'RIFT', ck: 'rgba(242,149,76,0.87)', ck2: 'rgba(255,255,212,1)', bg: 'rgba(10,6,10,.88)',
     ms: 1250, shake: 2, sfx: 'rumble',
     parts: [['split', { d: 1250 }], ['slash', { n: 3, angles: [-8, -2, 4], gap: 90, bw: 6, d: 520 }],
       ['beam', { n: 3, gap: 110, dl: 240, d: 900 }], ['shard', { n: 14, dl: 300, d: 800 }]]
   },
   /* ---- 砂塵の銃王・ベルテゾール：砂嵐のなかから ---- */
   duststorm: {
-    name: '砂塵', kana: 'DUSTSTORM', ck: 'rgba(196,158,96,.5)', ck2: 'rgba(246,230,190,.9)', bg: 'rgba(28,20,10,.8)',
+    name: '砂塵', kana: 'DUSTSTORM', ck: 'rgba(212,171,104,0.78)', ck2: 'rgba(255,248,205,0.95)', bg: 'rgba(28,20,10,.8)',
     ms: 1300, shake: 1, sfx: 'rumble',
     parts: [['veil', { d: 1300 }], ['smoke', { n: 9, d: 1300, gap: 90 }],
       ['rain', { n: 22, a: 74, d: 760, gap: 30, h: 90, len: 140 }], ['mote', { n: 14, dir: 'out', d: 1100 }]]
   },
   /* ---- 天焔の執行者・イランツァ：天から降りてくる ---- */
   descent: {
-    name: '降臨', kana: 'DESCENT', ck: 'rgba(240,206,130,.58)', ck2: 'rgba(255,250,228,.96)', bg: 'rgba(10,8,16,.8)',
+    name: '降臨', kana: 'DESCENT', ck: 'rgba(255,222,140,0.9)', ck2: 'rgba(255,255,246,1)', bg: 'rgba(10,8,16,.8)',
     ms: 1350, sfx: 'summon',
     parts: [['veil', { d: 1350 }], ['beam', { d: 1100, w: 180 }], ['ring', { n: 3, rev: true, gap: 150, d: 950, oy: 44 }],
       ['feather', { n: 12, d: 1300 }], ['star', { dl: 460 }]]
   },
   /* ---- キングの聖杯：封を解く ---- */
   unseal: {
-    name: '封印解除', kana: 'UNSEAL', ck: 'rgba(150,216,210,.54)', ck2: 'rgba(236,255,252,.95)', bg: 'rgba(6,14,16,.82)',
+    name: '封印解除', kana: 'UNSEAL', ck: 'rgba(162,233,227,0.84)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,14,16,.82)',
     ms: 1300, sfx: 'chime',
     parts: [['veil', { d: 1300 }], ['chain', { n: 10, d: 1000 }], ['glyph', { t: '封印解除', n: 4, r: -140, sz: 26, d: 1000, spin: 90 }],
       ['ring', { n: 2, gap: 170, dl: 420, d: 850 }], ['star', { dl: 620 }]]
   },
   /* ---- エクスプロージョン：爆ぜる ---- */
   blast: {
-    name: '爆燃', kana: 'BLAST', ck: 'rgba(238,120,52,.6)', ck2: 'rgba(255,240,198,.98)', bg: 'rgba(16,6,2,.84)',
+    name: '爆燃', kana: 'BLAST', ck: 'rgba(255,130,56,0.9)', ck2: 'rgba(255,255,214,1)', bg: 'rgba(16,6,2,.84)',
     ms: 1150, shake: 3, sfx: 'shot',
     parts: [['pulse', { d: 620 }], ['ray', { n: 12, d: 860, len: 50 }], ['shard', { n: 18, d: 900, len: 42 }],
       ['flame', { n: 3, dl: 160, d: 950, h: 44 }], ['smoke', { n: 6, dl: 220, d: 1050 }]]
   },
   /* ---- 煉獄の竜・アジュラフリート：火刑の柱 ---- */
   pyre: {
-    name: '火刑', kana: 'PYRE', ck: 'rgba(222,86,40,.58)', ck2: 'rgba(255,224,170,.95)', bg: 'rgba(18,4,2,.86)',
+    name: '火刑', kana: 'PYRE', ck: 'rgba(240,93,43,0.9)', ck2: 'rgba(255,242,184,1)', bg: 'rgba(18,4,2,.86)',
     ms: 1300, shake: 1, sfx: 'rumble',
     parts: [['veil', { d: 1300 }], ['flame', { n: 5, gap: 90, d: 1200, h: 62 }],
       ['mote', { n: 20, dir: 'up', d: 1200 }], ['ring', { n: 2, gap: 200, dl: 300, d: 900 }]]
   },
   /* ---- 蝕月の魔女・エズディア：月が欠ける ---- */
   eclipse: {
-    name: '月蝕', kana: 'ECLIPSE', ck: 'rgba(188,160,236,.52)', ck2: 'rgba(240,232,255,.94)', bg: 'rgba(4,4,12,.9)',
+    name: '月蝕', kana: 'ECLIPSE', ck: 'rgba(203,173,255,0.81)', ck2: 'rgba(255,251,255,1)', bg: 'rgba(4,4,12,.9)',
     ms: 1400, sfx: 'vanish',
     parts: [['veil', { d: 1400 }], ['sun', { d: 1300, sz: 40, by: 24 }], ['sun', { dark: true, d: 1300, sz: 38, by: 26 }],
       ['ring', { n: 2, gap: 220, dl: 420, bw: 3, to: 4, d: 950, oy: 40 }], ['mote', { n: 14, dir: 'out', d: 1200, dl: 300 }]]
   },
   /* ---- 堕天の君・ベリアル：翼を失って落ちる ---- */
   fallen: {
-    name: '墜天', kana: 'FALLEN', ck: 'rgba(168,110,200,.54)', ck2: 'rgba(248,232,255,.95)', bg: 'rgba(8,4,14,.88)',
+    name: '墜天', kana: 'FALLEN', ck: 'rgba(181,119,216,0.84)', ck2: 'rgba(255,251,255,1)', bg: 'rgba(8,4,14,.88)',
     ms: 1400, shake: 2, sfx: 'summon',
     parts: [['veil', { d: 1400 }], ['wing', { d: 900, oy: 38 }], ['feather', { n: 16, dl: 360, d: 1200 }],
       ['beam', { dl: 300, d: 900, w: 90 }], ['pulse', { dl: 760 }]]
   },
   /* ---- 慈愛の凛華・オルテニア：花がひらく ---- */
   bloom: {
-    name: '花開', kana: 'BLOOM', ck: 'rgba(238,154,180,.5)', ck2: 'rgba(255,242,248,.95)', bg: 'rgba(16,8,14,.74)',
+    name: '花開', kana: 'BLOOM', ck: 'rgba(255,166,194,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(16,8,14,.74)',
     ms: 1250, sfx: 'chime',
     parts: [['veil', { d: 1250 }], ['ring', { n: 3, gap: 130, bw: 3, to: 4, d: 950 }],
       ['petal', { n: 26, dir: 'up', d: 1200, gap: 34, sz: 18 }], ['star', { n: 3, gap: 120, dl: 340, d: 720, sz: 78 }]]
   },
   /* ---- 古き天書・リアントース：書が開かれる ---- */
   codex: {
-    name: '開冊', kana: 'CODEX', ck: 'rgba(214,186,124,.52)', ck2: 'rgba(252,244,220,.95)', bg: 'rgba(12,10,8,.84)',
+    name: '開冊', kana: 'CODEX', ck: 'rgba(231,201,134,0.81)', ck2: 'rgba(255,255,238,1)', bg: 'rgba(12,10,8,.84)',
     ms: 1300, sfx: 'chime',
     parts: [['veil', { d: 1300 }], ['page', { n: 9, gap: 95, d: 820 }],
-      ['glyph', { t: '古天書記', n: 4, r: -118, sz: 22, d: 1000, dl: 320, oy: 58 }], ['beam', { n: 2, dl: 520, d: 760 }]]
+      ['glyph', { t: '古天書記', n: 4, r: -108, sz: 22, d: 1000, dl: 320, oy: 64 }], ['beam', { n: 2, dl: 520, d: 760 }]]
   },
   /* ---- 散華の弾幕・シャクドウ：花びらが散る ---- */
   scatter: {
-    name: '散華', kana: 'SCATTER', ck: 'rgba(222,118,128,.52)', ck2: 'rgba(255,236,236,.94)', bg: 'rgba(12,6,8,.8)',
+    name: '散華', kana: 'SCATTER', ck: 'rgba(240,127,138,0.81)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(12,6,8,.8)',
     ms: 1200, shake: 1, sfx: 'shot',
     parts: [['veil', { d: 1200 }], ['petal', { n: 24, d: 1150, gap: 32 }],
       ['slash', { n: 3, angles: [-40, 16, 62], gap: 90, bw: 3, d: 420 }], ['mote', { n: 12, dir: 'out', d: 900, dl: 240 }]]
   },
   /* ---- 停輪の天使・ゼラエル：時の輪が止まる ---- */
   wheel: {
-    name: '停輪', kana: 'WHEEL', ck: 'rgba(160,200,235,.5)', ck2: 'rgba(240,250,255,.95)', bg: 'rgba(6,10,16,.84)',
+    name: '停輪', kana: 'WHEEL', ck: 'rgba(173,216,254,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,10,16,.84)',
     ms: 1400, sfx: 'chime',
     parts: [['veil', { d: 1400 }], ['dial', { d: 1350, a: 236 }], ['grid', { d: 1200, cell: 54 }],
       ['ring', { n: 2, gap: 200, rev: true, d: 1000 }], ['pulse', { dl: 880 }]]
   },
   /* ---- 黄金錬成・シンセライズ：金が積み上がる ---- */
   goldpile: {
-    name: '金山', kana: 'GOLD', ck: 'rgba(236,194,96,.56)', ck2: 'rgba(255,246,214,.96)', bg: 'rgba(16,12,4,.8)',
+    name: '金山', kana: 'GOLD', ck: 'rgba(255,210,104,0.87)', ck2: 'rgba(255,255,231,1)', bg: 'rgba(16,12,4,.8)',
     ms: 1250, sfx: 'chime',
     parts: [['veil', { d: 1250 }], ['coin', { n: 24, d: 1000, gap: 40 }], ['gear', { n: 2, d: 1100, sz: 84 }],
       ['star', { dl: 640 }]]
   },
   /* ---- 呪詞の魔女・ジンジャー：呪いの言葉が渦巻く ---- */
   curse: {
-    name: '呪詞', kana: 'CURSE', ck: 'rgba(126,186,122,.5)', ck2: 'rgba(226,255,220,.92)', bg: 'rgba(4,10,6,.88)',
+    name: '呪詞', kana: 'CURSE', ck: 'rgba(136,201,132,0.78)', ck2: 'rgba(244,255,238,0.98)', bg: 'rgba(4,10,6,.88)',
     ms: 1300, sfx: 'vanish',
     parts: [['veil', { d: 1300 }], ['swirl', { d: 1250, spin: 520 }],
       ['glyph', { t: '呪詞呪詞呪詞', n: 6, r: -120, sz: 20, spin: 180, d: 1100 }],
@@ -13873,14 +13936,14 @@ const ENTRY_FX = {
   },
   /* ---- 絶尽の射手・ライオ：数が尽きる ---- */
   zerocount: {
-    name: '絶尽', kana: 'ZERO', ck: 'rgba(214,126,110,.52)', ck2: 'rgba(255,230,222,.95)', bg: 'rgba(10,6,6,.84)',
+    name: '絶尽', kana: 'ZERO', ck: 'rgba(231,136,119,0.81)', ck2: 'rgba(255,248,240,1)', bg: 'rgba(10,6,6,.84)',
     ms: 1200, shake: 1, sfx: 'shot',
     parts: [['veil', { d: 1200 }], ['digit', { seq: ['6', '5', '4', '3', '2', '1', '0'], d: 1150, sz: 86 }],
       ['ring', { n: 3, gap: 130, rev: true, d: 1000 }], ['pulse', { dl: 820 }]]
   },
   /* ---- 術式の継承者・セフィー：魔法陣を描く ---- */
   sigil: {
-    name: '術式', kana: 'SIGIL', ck: 'rgba(150,186,236,.5)', ck2: 'rgba(236,246,255,.95)', bg: 'rgba(6,8,16,.84)',
+    name: '術式', kana: 'SIGIL', ck: 'rgba(162,201,255,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,8,16,.84)',
     ms: 1300, sfx: 'chime',
     parts: [['veil', { d: 1300 }], ['grid', { d: 1250, cell: 38 }],
       ['glyph', { t: '術式継承', n: 8, r: -140, sz: 18, spin: 120, d: 1150 }],
@@ -13888,28 +13951,28 @@ const ENTRY_FX = {
   },
   /* ---- 断頭の処刑人・サガツマツ：一刀 ---- */
   behead: {
-    name: '断頭', kana: 'BEHEAD', ck: 'rgba(196,74,64,.56)', ck2: 'rgba(255,240,236,.98)', bg: 'rgba(10,2,4,.88)',
+    name: '断頭', kana: 'BEHEAD', ck: 'rgba(212,80,69,0.87)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(10,2,4,.88)',
     ms: 1000, shake: 3, sfx: 'shot',
     parts: [['slash', { n: 1, a: -16, bw: 10, d: 380 }], ['pulse', { dl: 260, d: 420 }],
       ['split', { dl: 280, d: 720 }], ['shard', { n: 10, dl: 320, d: 700, len: 28 }]]
   },
   /* ---- 丁半鬼・クキシロ：骰子を振る ---- */
   dicebet: {
-    name: '丁半', kana: 'DICE', ck: 'rgba(232,172,92,.54)', ck2: 'rgba(255,244,214,.96)', bg: 'rgba(12,8,6,.82)',
+    name: '丁半', kana: 'DICE', ck: 'rgba(251,186,99,0.84)', ck2: 'rgba(255,255,231,1)', bg: 'rgba(12,8,6,.82)',
     ms: 1250, shake: 1, sfx: 'card',
     parts: [['veil', { d: 1250 }], ['die', { pips: [4, 3], d: 1000, gap: 130 }],
       ['coin', { n: 10, dl: 300, d: 900, gap: 60 }], ['pulse', { dl: 760 }]]
   },
   /* ---- 天書の深淵：底の見えないところへ落ちる ---- */
   abyss: {
-    name: '深淵', kana: 'ABYSS', ck: 'rgba(104,132,186,.5)', ck2: 'rgba(222,236,255,.9)', bg: 'rgba(2,6,14,.9)',
+    name: '深淵', kana: 'ABYSS', ck: 'rgba(112,143,201,0.78)', ck2: 'rgba(240,255,255,0.95)', bg: 'rgba(2,6,14,.9)',
     ms: 1400, sfx: 'vanish',
     parts: [['veil', { d: 1400 }], ['tide', { d: 1300 }], ['page', { n: 4, gap: 150, d: 900 }],
       ['iris', { dl: 420, d: 950 }], ['mote', { n: 14, dir: 'down', d: 1200 }]]
   },
   /* ---- アーティファクトω：完全な機構 ---- */
   omega: {
-    name: '完全', kana: 'OMEGA', ck: 'rgba(170,206,214,.52)', ck2: 'rgba(238,252,255,.95)', bg: 'rgba(6,10,12,.86)',
+    name: '完全', kana: 'OMEGA', ck: 'rgba(184,222,231,0.81)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,10,12,.86)',
     ms: 1400, shake: 2, sfx: 'summon',
     parts: [['veil', { d: 1400 }], ['gear', { n: 3, d: 1300, sz: 120, spin: 520 }],
       ['glyph', { t: 'Ω', n: 1, r: 0, sz: 110, d: 1100, dl: 300, oy: 54 }],
@@ -13917,14 +13980,14 @@ const ENTRY_FX = {
   },
   /* ---- 全力の星：出せる力をすべて ---- */
   allstar: {
-    name: '全力', kana: 'ALL-OUT', ck: 'rgba(240,214,120,.58)', ck2: 'rgba(255,252,232,.98)', bg: 'rgba(10,8,4,.8)',
+    name: '全力', kana: 'ALL-OUT', ck: 'rgba(255,231,130,0.9)', ck2: 'rgba(255,255,251,1)', bg: 'rgba(10,8,4,.8)',
     ms: 1050, shake: 2, sfx: 'super',
     parts: [['veil', { d: 1050 }], ['pulse', { n: 2, gap: 200, d: 560 }], ['ray', { n: 16, d: 900, len: 56, gap: 20 }],
       ['star', { n: 5, gap: 70, d: 820 }], ['mote', { n: 18, dir: 'out', d: 1000 }]]
   },
   /* ---- 億り人：札束が天井まで ---- */
   fortune: {
-    name: '億', kana: 'FORTUNE', ck: 'rgba(240,204,96,.58)', ck2: 'rgba(255,250,214,.98)', bg: 'rgba(14,10,2,.8)',
+    name: '億', kana: 'FORTUNE', ck: 'rgba(255,220,104,0.9)', ck2: 'rgba(255,255,231,1)', bg: 'rgba(14,10,2,.8)',
     ms: 1450, shake: 1, sfx: 'chime',
     parts: [['veil', { d: 1450 }], ['coin', { n: 34, d: 1150, gap: 32 }],
       ['digit', { seq: ['1', '12', '340', '7,800', '65万', '1億'], d: 1300, sz: 64, oy: 36 }],
@@ -13932,43 +13995,43 @@ const ENTRY_FX = {
   },
   /* ---- 紅の疾風・スカーレット：赤い刃が走る ---- */
   crimson: {
-    name: '紅刃', kana: 'CRIMSON', ck: 'rgba(214,60,66,.56)', ck2: 'rgba(255,230,230,.96)', bg: 'rgba(12,2,4,.86)',
+    name: '紅刃', kana: 'CRIMSON', ck: 'rgba(231,65,71,0.87)', ck2: 'rgba(255,248,248,1)', bg: 'rgba(12,2,4,.86)',
     ms: 1200, shake: 2, sfx: 'shot',
     parts: [['veil', { d: 1200 }], ['slash', { n: 5, angles: [-28, -12, 4, 20, 38], gap: 130, bw: 5, d: 560 }],
       ['rain', { n: 18, a: 108, d: 760, gap: 30, len: 130 }], ['pulse', { dl: 680 }]]
   },
   /* ---- 不落の城壁・セザール：石壁が立つ ---- */
   rampart: {
-    name: '城壁', kana: 'RAMPART', ck: 'rgba(170,158,140,.52)', ck2: 'rgba(246,240,230,.92)', bg: 'rgba(10,10,8,.84)',
+    name: '城壁', kana: 'RAMPART', ck: 'rgba(184,171,151,0.81)', ck2: 'rgba(255,255,248,0.98)', bg: 'rgba(10,10,8,.84)',
     ms: 1250, shake: 2, sfx: 'rumble',
     parts: [['veil', { d: 1250 }], ['wall', { n: 7, gap: 70, d: 900, h: 52, hmin: 26 }],
       ['tile', { n: 5, dl: 300, d: 760, gap: 70, sz: 44 }], ['smoke', { n: 5, dl: 260, d: 900, ymin: 68 }]]
   },
   /* ---- 妖精の歌姫・アリア：妖精が輪を描く ---- */
   fairyring: {
-    name: '妖精環', kana: 'FAIRY', ck: 'rgba(142,218,176,.5)', ck2: 'rgba(238,255,244,.95)', bg: 'rgba(6,14,10,.78)',
+    name: '妖精環', kana: 'FAIRY', ck: 'rgba(153,235,190,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,14,10,.78)',
     ms: 1350, sfx: 'chime',
     parts: [['veil', { d: 1350 }], ['orb', { n: 7, d: 1300, r: 20 }],
       ['ring', { n: 2, gap: 220, bw: 1, to: 3, d: 1000 }], ['mote', { n: 18, dir: 'up', d: 1250 }], ['star', { dl: 760 }]]
   },
   /* ---- 嵐槍の主・オーディン：槍が降る ---- */
   gungnir: {
-    name: '投槍', kana: 'GUNGNIR', ck: 'rgba(170,192,230,.54)', ck2: 'rgba(244,250,255,.98)', bg: 'rgba(6,8,14,.86)',
+    name: '投槍', kana: 'GUNGNIR', ck: 'rgba(184,207,248,0.84)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,8,14,.86)',
     ms: 1100, shake: 3, sfx: 'rumble',
     parts: [['veil', { d: 1100 }], ['bolt', { n: 3, gap: 110, d: 520 }],
       ['lance', { n: 3, dl: 280, gap: 90, d: 620, h: 62 }], ['pulse', { dl: 640 }], ['shard', { n: 10, dl: 700, d: 620, len: 24 }]]
   },
   /* ---- 闇の帝王・ダークエンペラー：玉座が現れる ---- */
   throne: {
-    name: '玉座', kana: 'THRONE', ck: 'rgba(146,96,176,.52)', ck2: 'rgba(234,218,255,.94)', bg: 'rgba(4,2,10,.9)',
+    name: '玉座', kana: 'THRONE', ck: 'rgba(158,104,190,0.81)', ck2: 'rgba(253,235,255,1)', bg: 'rgba(4,2,10,.9)',
     ms: 1450, shake: 2, sfx: 'summon',
     parts: [['curtain', { d: 1400 }], ['wall', { n: 3, gap: 110, dl: 260, d: 900, h: 46, hmin: 30, w: 92 }],
-      ['glyph', { t: '闇帝王', n: 3, r: -118, sz: 24, d: 1100, dl: 420, oy: 56 }],
+      ['glyph', { t: '闇帝王', n: 3, r: -104, sz: 24, d: 1100, dl: 420, oy: 64 }],
       ['ring', { n: 2, gap: 200, dl: 500, d: 950 }], ['mote', { n: 14, dir: 'up', d: 1300 }]]
   },
   /* ---- 守護の聖盾・アイテール：盾の壁 ---- */
   aegis: {
-    name: '盾壁', kana: 'AEGIS', ck: 'rgba(196,214,236,.54)', ck2: 'rgba(250,253,255,.96)', bg: 'rgba(8,10,14,.82)',
+    name: '盾壁', kana: 'AEGIS', ck: 'rgba(212,231,255,0.84)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(8,10,14,.82)',
     ms: 1250, sfx: 'chime',
     parts: [['veil', { d: 1250 }], ['ring', { n: 3, hex: true, gap: 150, bw: 4, sz: 190, to: 2.4, d: 1150 }],
       ['ring', { n: 2, hex: true, rev: true, gap: 180, bw: 2, sz: 150, to: 3.4, d: 1050 }],
@@ -13976,97 +14039,97 @@ const ENTRY_FX = {
   },
   /* ---- オリヴィエ（2枚ともこの演出）：双翼が開く ---- */
   wings: {
-    name: '双翼', kana: 'WINGS', ck: 'rgba(224,206,160,.54)', ck2: 'rgba(255,250,236,.96)', bg: 'rgba(10,8,12,.8)',
+    name: '双翼', kana: 'WINGS', ck: 'rgba(242,222,173,0.84)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(10,8,12,.8)',
     ms: 1300, sfx: 'summon',
     parts: [['veil', { d: 1300 }], ['wing', { d: 1000, oy: 40 }], ['beam', { dl: 240, d: 900, w: 140 }],
       ['feather', { n: 14, dl: 300, d: 1200 }], ['ring', { n: 2, gap: 180, dl: 420, d: 900 }]]
   },
   /* ---- 香風の踊り子・ウィムエル：香りが風に乗る ---- */
   fragrance: {
-    name: '香風', kana: 'FRAGRANCE', ck: 'rgba(224,170,208,.48)', ck2: 'rgba(255,244,252,.94)', bg: 'rgba(12,8,14,.74)',
+    name: '香風', kana: 'FRAGRANCE', ck: 'rgba(242,184,225,0.74)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(12,8,14,.74)',
     ms: 1350, sfx: 'chime',
     parts: [['veil', { d: 1350 }], ['swirl', { d: 1300, spin: 340, sz: 50 }],
       ['petal', { n: 16, dir: 'up', d: 1250, sz: 12 }], ['mote', { n: 16, dir: 'out', d: 1200 }]]
   },
   /* ---- 玩具職人・カミシラ：玩具箱がひっくり返る ---- */
   toybox: {
-    name: '玩具箱', kana: 'TOYBOX', ck: 'rgba(238,166,104,.52)', ck2: 'rgba(255,246,228,.96)', bg: 'rgba(14,8,6,.78)',
+    name: '玩具箱', kana: 'TOYBOX', ck: 'rgba(255,179,112,0.81)', ck2: 'rgba(255,255,246,1)', bg: 'rgba(14,8,6,.78)',
     ms: 1200, shake: 1, sfx: 'card',
     parts: [['veil', { d: 1200 }], ['tile', { n: 10, d: 820, gap: 56 }],
       ['coin', { n: 12, dl: 260, d: 880, gap: 50, sz: 20 }], ['star', { n: 3, gap: 110, dl: 420, d: 700 }]]
   },
   /* ---- 深海の守り・ネムラフィ：水の底へ ---- */
   sink: {
-    name: '深海', kana: 'ABYSSAL', ck: 'rgba(98,170,206,.5)', ck2: 'rgba(230,248,255,.92)', bg: 'rgba(2,10,18,.88)',
+    name: '深海', kana: 'ABYSSAL', ck: 'rgba(106,184,222,0.78)', ck2: 'rgba(248,255,255,0.98)', bg: 'rgba(2,10,18,.88)',
     ms: 1450, sfx: 'vanish',
     parts: [['veil', { d: 1450 }], ['tide', { d: 1400 }], ['bub', { n: 20, d: 1350, gap: 54 }],
       ['mote', { n: 12, dir: 'down', d: 1250 }], ['ring', { n: 2, gap: 240, rev: true, d: 1000 }]]
   },
   /* ---- 鏡界の魔女・オルフェグ：鏡の向こうから ---- */
   mirrorworld: {
-    name: '鏡界', kana: 'MIRROR', ck: 'rgba(182,206,226,.52)', ck2: 'rgba(252,254,255,.96)', bg: 'rgba(6,8,12,.86)',
+    name: '鏡界', kana: 'MIRROR', ck: 'rgba(197,222,244,0.81)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,8,12,.86)',
     ms: 1350, shake: 1, sfx: 'vanish',
     parts: [['veil', { d: 1350 }], ['pane', { d: 1200 }], ['shard', { n: 16, dl: 700, d: 700, len: 32 }],
       ['iris', { out: true, dl: 740, d: 700 }], ['star', { dl: 760 }]]
   },
   /* ---- 茨園の姫・グラシェル：茨が囲う ---- */
   thorns: {
-    name: '茨園', kana: 'THORNS', ck: 'rgba(146,176,118,.5)', ck2: 'rgba(240,250,226,.92)', bg: 'rgba(8,12,6,.84)',
+    name: '茨園', kana: 'THORNS', ck: 'rgba(158,190,127,0.78)', ck2: 'rgba(255,255,244,0.98)', bg: 'rgba(8,12,6,.84)',
     ms: 1350, sfx: 'rumble',
     parts: [['veil', { d: 1350 }], ['thorn', { n: 9, gap: 70, d: 1000, h: 54 }],
       ['petal', { n: 12, dl: 420, d: 1100, sz: 12 }], ['ring', { n: 2, gap: 200, dl: 480, d: 900 }]]
   },
   /* ---- 夢幻の守り人・ユルゼッタ：まぼろしのなかに ---- */
   dream: {
-    name: '夢幻', kana: 'DREAM', ck: 'rgba(186,170,228,.46)', ck2: 'rgba(248,244,255,.94)', bg: 'rgba(8,8,18,.76)',
+    name: '夢幻', kana: 'DREAM', ck: 'rgba(201,184,246,0.71)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(8,8,18,.76)',
     ms: 1450, sfx: 'chime',
     parts: [['veil', { d: 1450 }], ['swirl', { d: 1400, spin: 300, sz: 64 }], ['bub', { n: 14, d: 1300, gap: 70, sz: 34 }],
       ['glyph', { t: '夢幻', n: 2, r: -112, sz: 26, spin: 60, d: 1100, dl: 360, oy: 58 }], ['mote', { n: 14, dir: 'up', d: 1300 }]]
   },
   /* ---- 終夜の女王・ヴェネクシア：夜が明けないまま ---- */
   nightfall: {
-    name: '終夜', kana: 'NIGHTFALL', ck: 'rgba(110,122,190,.48)', ck2: 'rgba(234,238,255,.94)', bg: 'rgba(2,2,10,.92)',
+    name: '終夜', kana: 'NIGHTFALL', ck: 'rgba(119,132,205,0.74)', ck2: 'rgba(253,255,255,1)', bg: 'rgba(2,2,10,.92)',
     ms: 1400, sfx: 'vanish',
     parts: [['curtain', { d: 1380 }], ['mote', { n: 24, dir: 'out', d: 1300 }], ['orb', { n: 5, dl: 300, d: 1100, r: 24, sz: 9 }],
       ['iris', { dl: 480, d: 900 }], ['star', { n: 3, gap: 140, dl: 520, d: 760 }]]
   },
   /* ---- 黎明の姫・シェリネ：夜が明ける ---- */
   dawn: {
-    name: '黎明', kana: 'DAWN', ck: 'rgba(244,190,130,.52)', ck2: 'rgba(255,250,232,.96)', bg: 'rgba(14,10,18,.8)',
+    name: '黎明', kana: 'DAWN', ck: 'rgba(255,205,140,0.81)', ck2: 'rgba(255,255,251,1)', bg: 'rgba(14,10,18,.8)',
     ms: 1350, sfx: 'chime',
     parts: [['veil', { d: 1350 }], ['sun', { d: 1300, sz: 38, by: 4 }], ['ray', { n: 12, dl: 420, d: 820, len: 48, oy: 60 }],
       ['mote', { n: 16, dir: 'up', d: 1250 }], ['pulse', { dl: 820 }]]
   },
   /* ---- 天剣の担い手・イドメタ：剣が降りて立つ ---- */
   heavensword: {
-    name: '天剣', kana: 'SWORD', ck: 'rgba(214,224,240,.54)', ck2: 'rgba(255,255,255,.98)', bg: 'rgba(8,10,16,.84)',
+    name: '天剣', kana: 'SWORD', ck: 'rgba(231,242,255,0.84)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(8,10,16,.84)',
     ms: 1150, shake: 2, sfx: 'summon',
     parts: [['veil', { d: 1150 }], ['lance', { d: 820, w: 18, h: 60 }], ['pulse', { dl: 560, d: 420 }],
       ['ring', { n: 3, gap: 110, dl: 580, bw: 2, to: 4, d: 760 }], ['star', { dl: 620, sz: 100 }]]
   },
   /* ---- 奏絶の歌姫・リーシェナ：音が波になる ---- */
   chord: {
-    name: '奏絶', kana: 'CHORD', ck: 'rgba(196,166,232,.5)', ck2: 'rgba(248,242,255,.95)', bg: 'rgba(8,6,14,.8)',
+    name: '奏絶', kana: 'CHORD', ck: 'rgba(212,179,251,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(8,6,14,.8)',
     ms: 1300, sfx: 'chime',
     parts: [['veil', { d: 1300 }], ['ring', { n: 5, gap: 110, bw: 2, to: 6, d: 1000 }],
       ['glyph', { t: '♪♫♪♫', n: 6, r: -126, sz: 24, spin: 150, d: 1150 }], ['mote', { n: 14, dir: 'out', d: 1150 }]]
   },
   /* ---- 豪風の双剣・リノセウス：風が通る ---- */
   gale: {
-    name: '豪風', kana: 'GALE', ck: 'rgba(158,214,200,.5)', ck2: 'rgba(240,255,250,.94)', bg: 'rgba(6,12,12,.8)',
+    name: '豪風', kana: 'GALE', ck: 'rgba(171,231,216,0.78)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(6,12,12,.8)',
     ms: 1250, shake: 1, sfx: 'rumble',
     parts: [['veil', { d: 1250 }], ['rain', { n: 34, a: 86, d: 860, gap: 22, h: 130, len: 150 }],
       ['swirl', { d: 1200, spin: 560, sz: 46 }], ['slash', { n: 4, angles: [-8, 4, -3, 7], gap: 140, bw: 3, dl: 200, d: 560 }]]
   },
   /* ---- 双極の硝子・フラムグラス：炎と水が並ぶ ---- */
   duality: {
-    name: '双極', kana: 'DUALITY', ck: 'rgba(206,146,120,.52)', ck2: 'rgba(252,242,238,.95)', bg: 'rgba(8,8,12,.84)',
+    name: '双極', kana: 'DUALITY', ck: 'rgba(222,158,130,0.81)', ck2: 'rgba(255,255,255,1)', bg: 'rgba(8,8,12,.84)',
     ms: 1300, shake: 1, sfx: 'summon',
     parts: [['split', { d: 1280 }],
-      ['tide', { half: 'r', d: 1150, ck: 'rgba(84,158,204,.5)' }],
-      ['bub', { n: 10, d: 1120, gap: 80, sz: 24, ck2: 'rgba(224,246,255,.9)' }],
-      ['flame', { n: 2, x: '24%', d: 1050, h: 52, w: 140, gap: 140, ck: 'rgba(234,118,56,.58)', ck2: 'rgba(255,226,170,.95)' }],
-      ['mote', { n: 10, dir: 'up', d: 1050, ck2: 'rgba(255,214,160,.95)' }],
+      ['tide', { half: 'r', d: 1150, ck: 'rgba(91,171,220,0.78)' }],
+      ['bub', { n: 10, d: 1120, gap: 80, sz: 24, ck2: 'rgba(242,255,255,0.95)' }],
+      ['flame', { n: 2, x: '24%', d: 1050, h: 52, w: 140, gap: 140, ck: 'rgba(253,127,60,0.9)', ck2: 'rgba(255,244,184,1)' }],
+      ['mote', { n: 10, dir: 'up', d: 1050, ck2: 'rgba(255,231,173,1)' }],
       ['ring', { n: 2, gap: 190, bw: 3, d: 1000 }]]
   }
 };
@@ -14106,7 +14169,13 @@ const FX = {
   healAt(sel, n) { const d = this.at(sel, 'fx-num heal'); if (d) d.textContent = '+' + n; },
   zeroAt(sel, t) { const d = this.at(sel, 'fx-num zero'); if (d) d.textContent = t; },
   dust(node) { this.at(node, 'fx-smoke'); },
-  shake(sel) { if (G && G.sim) return; const b = $(sel || '#bt'); if (!b) return; b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 300); },
+  shake(sel, hard) {
+    if (G && G.sim) return;
+    const b = $(sel || '#bt'); if (!b) return;
+    b.classList.remove('shake', 'hard'); void b.offsetWidth;
+    b.classList.add('shake'); if (hard) b.classList.add('hard');
+    setTimeout(() => b.classList.remove('shake', 'hard'), hard ? 420 : 300);
+  },
   async charge(aNode, tNode) {
     if (G && G.sim) return;
     const a = this.rect(aNode), t = this.rect(tNode);
@@ -14215,11 +14284,16 @@ const FX = {
     const st = el('div', 'efx');
     st.style.setProperty('--ck', S.ck); st.style.setProperty('--ck2', S.ck2); st.style.setProperty('--bg', S.bg);
     this.layer.appendChild(st);
-    /* 下地（演出そのものを読みやすくする） */
-    efxAdd(st, 'e-scrim', { d: (S.ms || 1200) + 'ms' });
+    const hold0 = S.ms || 1200;
+    st.style.setProperty('--d', (hold0 + 320) + 'ms');      // 画面が寄る長さ
+    /* 下地（演出そのものを読みやすくする）と黒帯 */
+    const frame = hold0 + 320;                              // 札が飛び去るところまで残す長さ
+    efxAdd(st, 'e-scrim', { d: frame + 'ms' });
+    efxAdd(st, 'e-bar t', { d: frame + 'ms' });
+    efxAdd(st, 'e-bar b', { d: frame + 'ms' });
     /* 名札 */
     const nm = el('div', 'e-name', '<i>' + esc(S.name) + '</i><s>' + esc(S.kana) + '</s>');
-    nm.style.setProperty('--d', (S.ms || 1200) + 'ms');
+    nm.style.setProperty('--d', frame + 'ms');
     st.appendChild(nm);
     /* 部品を順に置く */
     for (const [pk, o] of (S.parts || [])) {
@@ -14234,10 +14308,20 @@ const FX = {
       try { f(host, o || {}); } catch (e) { /* 一部品の失敗で演出を止めない */ }
     }
     Sfx.play(S.sfx || 'summon');
-    for (let i = 0; i < (S.shake || 0); i++) setTimeout(() => this.shake(shakeSel), 140 + i * 190);
+    for (let i = 0; i < (S.shake || 0); i++) setTimeout(() => this.shake(shakeSel, i === 0), 140 + i * 180);
     /* 演出の終わりぎわにカードを見せ、行き先へ送る */
     const hold = S.ms || 1200, show = Math.max(260, hold - 520);
     await sleep(show);
+    /* ここが見せ場。白閃・衝撃波・集中線・強い揺れを同時にぶつける */
+    efxAdd(st, 'e-blast', {});
+    efxAdd(st, 'e-impact', {});
+    efxAdd(st, 'e-halo', {});
+    for (let i = 0; i < 14; i++) {
+      efxAdd(st, 'e-speed', { a: (360 / 14 * i + EFX_R(-7, 7)) + 'deg', dl: (i * 11) + 'ms',
+                              bw: EFX_R(2, 5).toFixed(1) + 'px', len: EFX_R(18, 34).toFixed(0) + 'vmax' });
+    }
+    this.shake(shakeSel, true);
+    Sfx.play('super');
     const def = CARD_BY_ID[cardId];
     let card = null;
     if (def) {
@@ -14246,10 +14330,11 @@ const FX = {
       if (card) {
         st.appendChild(card);
         card.animate([
-          { opacity: 0, transform: 'translate(-50%,-50%) scale(.5)' },
-          { opacity: 1, transform: 'translate(-50%,-50%) scale(1.1)', offset: .45 },
-          { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
-        ], { duration: 300, easing: 'cubic-bezier(.2,1.5,.4,1)', fill: 'both' });
+          { opacity: 0, transform: 'translate(-50%,-50%) scale(2.1) rotate(-9deg)', filter: 'blur(10px)' },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1.14) rotate(2deg)', filter: 'blur(0)', offset: .34 },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(.98) rotate(-1deg)', offset: .62 },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1) rotate(0deg)' }
+        ], { duration: 460, easing: 'cubic-bezier(.16,1.1,.3,1)', fill: 'both' });
       }
     }
     await sleep(Math.max(0, hold - show));
