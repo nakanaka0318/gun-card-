@@ -20,6 +20,7 @@ const data = await pg.evaluate(() => {
   return {
     entries: UPDATES.length,
     firstDate: UPDATES[0] && UPDATES[0].date,
+    oldestDate: UPDATES.length && UPDATES[UPDATES.length - 1].date,
     newestFirst: UPDATES.every((u, i) => i === 0 || UPDATES[i - 1].date >= u.date),
     items: items.length,
     badId: items.filter(it => it.id && !CARD_BY_ID[it.id]).map(it => it.id),
@@ -31,8 +32,8 @@ const data = await pg.evaluate(() => {
 });
 ok('ホームに調整履歴の入り口がある', data.homeBtn, String(data.homeBtn));
 ok('画面として登録されている', data.inScreens, String(data.inScreens));
-ok('前回のアップデートが最初の1件として入っている',
-   data.entries >= 1 && data.firstDate === '2026-11-02', JSON.stringify(data));
+ok('最初のアップデート（2026-11-02）が一番古い記録として残っている',
+   data.entries >= 1 && data.oldestDate === '2026-11-02', JSON.stringify(data));
 ok('新しいものが先頭に並んでいる', data.newestFirst, String(data.newestFirst));
 ok('書いたカードIDが全て実在する', data.badId.length === 0, data.badId.join());
 ok('書いたカード名が今のカード名と一致する', data.nameMismatch.length === 0, data.nameMismatch.join());

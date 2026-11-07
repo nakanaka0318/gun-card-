@@ -633,6 +633,426 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
 @keyframes fxRibbon{0%{opacity:0; transform:translateX(-50%) scale(.82) translateY(8px)}
   16%,74%{opacity:1; transform:translateX(-50%) scale(1) translateY(0)}
   100%{opacity:0; transform:translateX(-50%) scale(1.02) translateY(-8px)}}
+
+/* ================= 登場演出の一覧 ================= */
+.efxbar{display:flex; gap:7px; margin:0 0 9px}
+.efxgrid{display:grid; grid-template-columns:repeat(auto-fill,minmax(146px,1fr)); gap:7px}
+.efxitem{position:relative; overflow:hidden; display:flex; flex-direction:column; gap:2px;
+  padding:9px 10px 8px 13px; text-align:left; cursor:pointer;
+  background:linear-gradient(170deg, rgba(255,255,255,.05), rgba(0,0,0,.22)), #221A12;
+  border:1px solid #3A2B1C; border-radius:var(--r); color:var(--paper);
+  font-family:inherit; -webkit-tap-highlight-color:transparent; transition:transform .12s, border-color .12s}
+.efxitem:active{transform:scale(.97)}
+.efxitem.on{border-color:var(--ck2); box-shadow:0 0 0 1px var(--ck2), 0 0 18px var(--ck)}
+.efxswatch{position:absolute; left:0; top:0; bottom:0; width:4px;
+  background:linear-gradient(to bottom, var(--ck2), var(--ck))}
+.efxname{font-family:var(--f-display); font-size:15px; font-weight:700; letter-spacing:.14em; color:var(--ck2)}
+.efxkana{font-family:var(--f-type); font-size:8px; letter-spacing:.26em; color:var(--ck2); opacity:.72}
+.efxcards{margin-top:4px; font-size:10.5px; line-height:1.5; color:var(--mute);
+  overflow:hidden; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical}
+.efxcards i{font-style:normal; opacity:.45; margin:0 1px}
+.efxmeta{margin-top:4px; font-size:9px; letter-spacing:.06em; color:var(--mute); opacity:.78}
+@media (max-width:420px){ .efxgrid{grid-template-columns:repeat(auto-fill,minmax(132px,1fr))} }
+
+/* ================= 登場演出（カードごとの専用演出） =================
+   場に出る前に流す演出。小さな部品を重ねて作るので、
+   部品はすべて「画面いっぱいの入れ物（.efx）」の中に絶対位置で置く。
+   色は --ck（主色）／--ck2（副色）／--bg（背景の沈み）で差し替える。 */
+.efx{position:absolute; inset:0; overflow:hidden;
+  --ck:rgba(232,193,130,.72); --ck2:rgba(255,245,220,.9); --bg:rgba(10,8,14,.72)}
+.efx>*{position:absolute; will-change:transform,opacity; pointer-events:none}
+/* 下地：どの演出でも画面をいちど沈めて、演出そのものを読みやすくする */
+.efx-sub{inset:0}
+.efx-sub>*{position:absolute; will-change:transform,opacity; pointer-events:none}
+.e-scrim{inset:0; background:rgba(5,4,8,.96); animation:eScrim var(--d,1200ms) ease-out both}
+@keyframes eScrim{0%{opacity:0}9%{opacity:1}84%{opacity:1}100%{opacity:0}}
+
+/* 幕：画面全体の色の沈み */
+.e-veil{inset:0; background:radial-gradient(120% 92% at 50% 44%, var(--ck) 0%, transparent 56%), linear-gradient(var(--bg), var(--bg));
+  animation:eVeil var(--d,1000ms) ease-out both}
+@keyframes eVeil{0%{opacity:0}20%{opacity:1}70%{opacity:.9}100%{opacity:0}}
+
+/* 閃光：一瞬だけ画面が白む */
+.e-pulse{inset:0; background:radial-gradient(70% 55% at 50% 46%, var(--ck2) 0%, var(--ck) 36%, transparent 72%);
+  animation:ePulse var(--d,520ms) cubic-bezier(.1,.9,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes ePulse{0%{opacity:0; transform:scale(.4)}14%{opacity:1; transform:scale(1)}100%{opacity:0; transform:scale(1.5)}}
+
+/* 光柱：縦に伸びる光 */
+.e-beam{top:0; height:100%; width:var(--w,110px); margin-left:calc(var(--w,110px) / -2); left:var(--x,50%);
+  background:linear-gradient(to bottom, transparent, var(--ck) 24%, var(--ck2) 50%, var(--ck) 76%, transparent);
+  filter:blur(1px); transform-origin:50% 0;
+  animation:eBeam var(--d,800ms) cubic-bezier(.2,.9,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eBeam{0%{opacity:0; transform:scaleY(0) scaleX(.3)}24%{opacity:1; transform:scaleY(1) scaleX(1)}
+  70%{opacity:.9; transform:scaleY(1) scaleX(.9)}100%{opacity:0; transform:scaleY(1) scaleX(.2)}}
+
+/* 放射光：中心から外へ伸びる光条 */
+.e-ray{left:50%; top:var(--oy,46%); width:var(--len,42vmax); height:3px; margin-top:-1.5px;
+  background:linear-gradient(to right, var(--ck2), var(--ck) 38%, transparent);
+  transform-origin:0 50%; transform:rotate(var(--a,0deg)) scaleX(0);
+  animation:eRay var(--d,760ms) cubic-bezier(.15,.9,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eRay{0%{opacity:0; transform:rotate(var(--a,0deg)) scaleX(0)}
+  26%{opacity:1; transform:rotate(var(--a,0deg)) scaleX(1)}100%{opacity:0; transform:rotate(var(--a,0deg)) scaleX(1.1)}}
+
+/* 輪：中心から広がる（逆向きにもできる） */
+.e-ring{left:50%; top:var(--oy,46%); width:var(--sz,120px); height:var(--sz,120px); margin:calc(var(--sz,120px) / -2);
+  margin-bottom:0; margin-right:0; border:var(--bw,2px) solid var(--ck); border-radius:50%;
+  animation:eRing var(--d,780ms) cubic-bezier(.2,.8,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eRing{0%{opacity:0; transform:scale(.2)}18%{opacity:1}100%{opacity:0; transform:scale(var(--to,5))}}
+.e-ring.rev{animation-name:eRingRev}
+@keyframes eRingRev{0%{opacity:0; transform:scale(var(--to,5))}22%{opacity:1}100%{opacity:0; transform:scale(.15)}}
+.e-ring.hex{border-radius:0; clip-path:polygon(50% 0,93% 25%,93% 75%,50% 100%,7% 75%,7% 25%)}
+
+/* 破片：外へ飛び散る三角 */
+.e-shard{left:50%; top:var(--oy,46%); width:var(--sz,16px); height:var(--sz,16px); margin:-8px 0 0 -8px;
+  background:var(--ck2); clip-path:polygon(50% 0,100% 100%,0 100%);
+  animation:eShard var(--d,700ms) cubic-bezier(.1,.8,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eShard{0%{opacity:0; transform:rotate(var(--a,0deg)) translateX(0) scale(.4)}
+  16%{opacity:1}100%{opacity:0; transform:rotate(var(--a,0deg)) translateX(var(--len,34vmax)) rotate(540deg) scale(1)}}
+
+/* 粒：ゆらゆら漂う小さな光 */
+.e-mote{left:var(--x,50%); top:var(--y,60%); width:var(--sz,5px); height:var(--sz,5px);
+  background:var(--ck2); border-radius:50%; box-shadow:0 0 8px var(--ck);
+  animation:eMote var(--d,1000ms) ease-out both; animation-delay:var(--dl,0ms)}
+@keyframes eMote{0%{opacity:0; transform:translate(0,0) scale(.3)}
+  22%{opacity:1; transform:translate(calc(var(--dx,0px) * .3), calc(var(--dy,-60px) * .3)) scale(1)}
+  100%{opacity:0; transform:translate(var(--dx,0px), var(--dy,-60px)) scale(.4)}}
+
+/* 斬撃：斜めに走る線 */
+.e-slash{left:50%; top:50%; width:var(--len,150vmax); height:var(--bw,4px); margin:-2px 0 0 calc(var(--len,150vmax) / -2);
+  background:linear-gradient(to right, transparent, var(--ck2) 30%, var(--ck2) 70%, transparent);
+  box-shadow:0 0 12px var(--ck); transform-origin:50% 50%;
+  animation:eSlash var(--d,420ms) cubic-bezier(.1,.9,.2,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eSlash{0%{opacity:0; transform:rotate(var(--a,-24deg)) translateX(-40%) scaleX(.2)}
+  30%{opacity:1; transform:rotate(var(--a,-24deg)) translateX(0) scaleX(1)}
+  100%{opacity:0; transform:rotate(var(--a,-24deg)) translateX(18%) scaleX(1)}}
+
+/* 分断：画面が上下（左右）に割れて開く */
+.e-panel{inset:0; background:linear-gradient(var(--bg), var(--bg)); border-color:var(--ck)}
+.e-panel.t{clip-path:polygon(0 0,100% 0,100% 50%,0 50%); border-bottom:2px solid var(--ck);
+  animation:ePanelT var(--d,900ms) cubic-bezier(.3,.9,.3,1) both}
+.e-panel.b{clip-path:polygon(0 50%,100% 50%,100% 100%,0 100%); border-top:2px solid var(--ck);
+  animation:ePanelB var(--d,900ms) cubic-bezier(.3,.9,.3,1) both}
+@keyframes ePanelT{0%{opacity:0; transform:translateY(0)}12%{opacity:1; transform:translateY(0)}
+  30%{transform:translateY(-10%)}80%{opacity:1; transform:translateY(-30%)}100%{opacity:0; transform:translateY(-46%)}}
+@keyframes ePanelB{0%{opacity:0; transform:translateY(0)}12%{opacity:1; transform:translateY(0)}
+  30%{transform:translateY(10%)}80%{opacity:1; transform:translateY(30%)}100%{opacity:0; transform:translateY(46%)}}
+
+/* 絞り：円が閉じる／開く */
+.e-iris{inset:0; background:linear-gradient(var(--bg), var(--bg));
+  animation:eIris var(--d,900ms) cubic-bezier(.3,.8,.3,1) both}
+@keyframes eIris{0%{opacity:0; clip-path:circle(0% at 50% 46%)}
+  20%{opacity:1; clip-path:circle(140% at 50% 46%)}
+  68%{opacity:1; clip-path:circle(32% at 50% 46%)}
+  100%{opacity:0; clip-path:circle(0% at 50% 46%)}}
+.e-iris.out{animation-name:eIrisOut}
+@keyframes eIrisOut{0%{opacity:1; clip-path:circle(0% at 50% 46%)}
+  34%{opacity:1; clip-path:circle(18% at 50% 46%)}
+  100%{opacity:0; clip-path:circle(150% at 50% 46%)}}
+
+/* 紋：文字や記号が円く並ぶ */
+.e-glyph{left:50%; top:var(--oy,46%); font-family:var(--f-type); font-size:var(--sz,20px); line-height:1;
+  color:var(--ck2); text-shadow:0 0 12px var(--ck); white-space:nowrap;
+  animation:eGlyph var(--d,900ms) ease-out both; animation-delay:var(--dl,0ms)}
+@keyframes eGlyph{0%{opacity:0; transform:translate(-50%,-50%) rotate(var(--a,0deg)) translateY(calc(var(--r,0px) * .3)) scale(.5)}
+  26%{opacity:1; transform:translate(-50%,-50%) rotate(var(--a,0deg)) translateY(var(--r,0px)) scale(1)}
+  72%{opacity:1}
+  100%{opacity:0; transform:translate(-50%,-50%) rotate(calc(var(--a,0deg) + var(--spin,0deg))) translateY(calc(var(--r,0px) * 1.25)) scale(1.1)}}
+
+/* 壁：下から立ち上がる塊 */
+.e-wall{left:var(--x,50%); bottom:0; width:var(--w,68px); height:var(--h,42vh); margin-left:calc(var(--w,68px) / -2);
+  background:linear-gradient(to top, var(--ck) 0%, var(--ck) 68%, transparent 100%),
+    linear-gradient(100deg, rgba(0,0,0,.42), rgba(255,255,255,.1));
+  border:1px solid var(--ck2); border-bottom:0; box-shadow:inset 0 0 26px rgba(0,0,0,.5);
+  transform-origin:50% 100%;
+  animation:eWall var(--d,780ms) cubic-bezier(.2,1.3,.4,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eWall{0%{opacity:0; transform:scaleY(0)}26%{opacity:1; transform:scaleY(1)}
+  74%{opacity:1; transform:scaleY(1)}100%{opacity:0; transform:scaleY(1.04)}}
+
+/* 翼：左右に開く弧 */
+.e-wing{left:50%; top:var(--oy,42%); width:30vmax; height:34vmax; margin:-17vmax 0 0 -15vmax;
+  background:linear-gradient(210deg, var(--ck2) 0%, var(--ck) 52%, transparent 94%);
+  filter:drop-shadow(0 0 14px var(--ck));
+  clip-path:polygon(100% 100%, 95% 66%, 82% 40%, 58% 18%, 26% 2%, 0 0, 14% 24%, 32% 48%, 56% 70%, 80% 88%);
+  animation:eWing var(--d,860ms) cubic-bezier(.2,1.1,.3,1) both}
+.e-wing.r{transform:scaleX(-1); animation-name:eWingR}
+@keyframes eWing{0%{opacity:0; transform:translateX(0) rotate(34deg) scale(.3)}
+  36%{opacity:1; transform:translateX(-24%) rotate(-10deg) scale(1)}
+  82%{opacity:1; transform:translateX(-28%) rotate(-14deg) scale(1.06)}
+  100%{opacity:0; transform:translateX(-36%) rotate(-20deg) scale(1.16)}}
+@keyframes eWingR{0%{opacity:0; transform:scaleX(-1) translateX(0) rotate(34deg) scale(.3)}
+  36%{opacity:1; transform:scaleX(-1) translateX(-24%) rotate(-10deg) scale(1)}
+  82%{opacity:1; transform:scaleX(-1) translateX(-28%) rotate(-14deg) scale(1.06)}
+  100%{opacity:0; transform:scaleX(-1) translateX(-36%) rotate(-20deg) scale(1.16)}}
+
+/* 賽：転がる骰子 */
+.e-die{left:var(--x,50%); top:var(--oy,42%); width:62px; height:62px; margin:-31px 0 0 -31px;
+  background:var(--ck2); border:2px solid var(--ck); border-radius:10px;
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--f-num); font-size:34px; font-weight:700; color:#2A1708;
+  animation:eDie var(--d,900ms) cubic-bezier(.25,1.2,.4,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eDie{0%{opacity:0; transform:translateY(-40vh) rotate(0deg) scale(.5)}
+  40%{opacity:1; transform:translateY(0) rotate(540deg) scale(1.1)}
+  52%{transform:translateY(-16px) rotate(600deg) scale(1)}
+  66%{transform:translateY(0) rotate(640deg) scale(1)}
+  100%{opacity:0; transform:translateY(0) rotate(640deg) scale(1.08)}}
+
+/* 文字盤：時計の面と針 */
+.e-dial{left:50%; top:var(--oy,44%); width:30vmax; height:30vmax; margin:-15vmax 0 0 -15vmax;
+  border:2px solid var(--ck); border-radius:50%; box-shadow:inset 0 0 40px var(--ck);
+  animation:eDial var(--d,1000ms) ease-out both}
+@keyframes eDial{0%{opacity:0; transform:scale(.5) rotate(-30deg)}24%{opacity:1; transform:scale(1) rotate(0deg)}
+  84%{opacity:1}100%{opacity:0; transform:scale(1.06)}}
+.e-hand{left:50%; top:var(--oy,44%); width:14vmax; height:3px; margin-top:-1.5px;
+  background:linear-gradient(to right, var(--ck2), var(--ck)); transform-origin:0 50%;
+  animation:eHand var(--d,1000ms) cubic-bezier(.2,.9,.1,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eHand{0%{opacity:0; transform:rotate(-90deg) scaleX(.2)}
+  18%{opacity:1; transform:rotate(-90deg) scaleX(1)}
+  62%{opacity:1; transform:rotate(var(--a,250deg)) scaleX(1)}
+  78%{transform:rotate(var(--a,250deg)) scaleX(1)}
+  100%{opacity:0; transform:rotate(var(--a,250deg)) scaleX(1)}}
+
+/* 潮：下から満ちる水面 */
+.e-tide{left:0; right:0; bottom:0; height:100%; background:linear-gradient(to top, var(--bg) 0%, var(--ck) 86%, transparent 100%);
+  transform-origin:50% 100%;
+  animation:eTide var(--d,1000ms) cubic-bezier(.3,.8,.3,1) both}
+.e-tide.l{clip-path:inset(0 50% 0 0)}
+.e-tide.r{clip-path:inset(0 0 0 50%)}
+@keyframes eTide{0%{opacity:0; transform:scaleY(0)}26%{opacity:1; transform:scaleY(.9)}
+  64%{opacity:1; transform:scaleY(1)}100%{opacity:0; transform:scaleY(1)}}
+
+/* 花弁：ひらひら舞う */
+.e-petal{left:var(--x,50%); top:var(--y,-6%); width:var(--sz,13px); height:calc(var(--sz,13px) * 1.6);
+  background:linear-gradient(150deg, var(--ck2), var(--ck)); border-radius:60% 0 60% 0; box-shadow:0 0 10px var(--ck);
+  animation:ePetal var(--d,1100ms) cubic-bezier(.4,.2,.6,.9) both; animation-delay:var(--dl,0ms)}
+@keyframes ePetal{0%{opacity:0; transform:translate(0,0) rotate(0deg)}
+  18%{opacity:1}
+  100%{opacity:0; transform:translate(var(--dx,20px), var(--dy,70vh)) rotate(var(--spin,420deg))}}
+
+/* 歯車：噛み合って回る */
+.e-gear{left:var(--x,50%); top:var(--y,44%); width:var(--sz,96px); height:var(--sz,96px);
+  margin:calc(var(--sz,96px) / -2) 0 0 calc(var(--sz,96px) / -2);
+  border:var(--bw,8px) dashed var(--ck); border-radius:50%;
+  box-shadow:inset 0 0 0 3px var(--ck2);
+  animation:eGear var(--d,1000ms) linear both; animation-delay:var(--dl,0ms)}
+@keyframes eGear{0%{opacity:0; transform:rotate(0deg) scale(.5)}
+  20%{opacity:1; transform:rotate(var(--half,90deg)) scale(1)}
+  82%{opacity:1}
+  100%{opacity:0; transform:rotate(var(--spin,360deg)) scale(1.04)}}
+
+/* 金貨：降って積もる */
+.e-coin{left:var(--x,50%); top:-8%; width:var(--sz,22px); height:var(--sz,22px); border-radius:50%;
+  background:radial-gradient(circle at 36% 32%, var(--ck2), var(--ck) 62%, rgba(90,58,10,.9));
+  box-shadow:0 0 10px var(--ck);
+  animation:eCoin var(--d,900ms) cubic-bezier(.4,.1,.7,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eCoin{0%{opacity:0; transform:translateY(0) rotateY(0deg) scale(.6)}
+  14%{opacity:1}
+  84%{opacity:1; transform:translateY(var(--dy,72vh)) rotateY(900deg) scale(1)}
+  100%{opacity:0; transform:translateY(calc(var(--dy,72vh) + 10px)) rotateY(960deg) scale(1)}}
+
+/* 槍：上から突き降りる */
+.e-lance{left:var(--x,50%); top:0; width:var(--w,10px); height:var(--h,56vh); margin-left:calc(var(--w,10px) / -2);
+  background:linear-gradient(to bottom, transparent, var(--ck) 30%, var(--ck2));
+  clip-path:polygon(0 0,100% 0,100% 88%,50% 100%,0 88%); filter:drop-shadow(0 0 10px var(--ck));
+  animation:eLance var(--d,620ms) cubic-bezier(.6,0,.2,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eLance{0%{opacity:0; transform:translateY(-110%) scaleY(.6)}
+  40%{opacity:1; transform:translateY(0) scaleY(1)}
+  52%{transform:translateY(-8px) scaleY(1)}
+  86%{opacity:1; transform:translateY(0) scaleY(1)}
+  100%{opacity:0; transform:translateY(0) scaleY(1)}}
+
+/* 鏡：面が入って砕ける */
+.e-pane{left:50%; top:var(--oy,44%); width:46vmin; height:60vmin; margin:-30vmin 0 0 -23vmin;
+  background:linear-gradient(140deg, var(--ck) 0%, transparent 38%, var(--ck2) 56%, transparent 74%);
+  border:2px solid var(--ck2); border-radius:6px;
+  animation:ePane var(--d,900ms) cubic-bezier(.2,.9,.3,1) both}
+@keyframes ePane{0%{opacity:0; transform:perspective(600px) rotateY(62deg) scale(.7)}
+  34%{opacity:1; transform:perspective(600px) rotateY(0deg) scale(1)}
+  62%{opacity:1; transform:perspective(600px) rotateY(0deg) scale(1)}
+  70%{transform:perspective(600px) rotateY(0deg) scale(1.03) translateX(4px)}
+  100%{opacity:0; transform:perspective(600px) rotateY(-14deg) scale(1.1)}}
+
+/* 雷：折れ線が落ちる */
+.e-bolt{left:var(--x,50%); top:0; width:var(--w,40px); height:var(--h,52vh); margin-left:calc(var(--w,40px) / -2);
+  background:var(--ck2); filter:drop-shadow(0 0 12px var(--ck));
+  clip-path:polygon(44% 0,70% 0,52% 38%,78% 34%,30% 100%,44% 54%,22% 58%);
+  animation:eBolt var(--d,520ms) steps(3,end) both; animation-delay:var(--dl,0ms)}
+@keyframes eBolt{0%{opacity:0; transform:scaleY(.2)}34%{opacity:1; transform:scaleY(1)}
+  60%{opacity:.4}76%{opacity:1}100%{opacity:0}}
+
+/* 炎：下から立ち上がる火 */
+.e-flame{left:var(--x,50%); bottom:0; width:var(--w,120px); height:var(--h,54vh); margin-left:calc(var(--w,120px) / -2);
+  background:radial-gradient(60% 100% at 50% 100%, var(--ck2) 0%, var(--ck) 38%, transparent 74%);
+  filter:blur(2px); transform-origin:50% 100%;
+  animation:eFlame var(--d,1000ms) ease-out both; animation-delay:var(--dl,0ms)}
+@keyframes eFlame{0%{opacity:0; transform:scaleY(.1) scaleX(.6)}
+  26%{opacity:1; transform:scaleY(1) scaleX(1)}
+  52%{transform:scaleY(.86) scaleX(1.1)}
+  74%{opacity:.9; transform:scaleY(1.04) scaleX(.94)}
+  100%{opacity:0; transform:scaleY(.8) scaleX(1.1)}}
+
+/* 数字：桁が回って止まる */
+.e-digit{left:50%; top:var(--oy,40%); font-family:var(--f-num); font-weight:700;
+  white-space:nowrap; font-size:min(var(--sz,66px), 13vw);
+  color:var(--ck2); text-shadow:0 0 18px var(--ck), 0 3px 0 rgba(0,0,0,.5); letter-spacing:.04em;
+  transform:translate(-50%,-50%); animation:eDigit var(--d,1000ms) ease-out both}
+@keyframes eDigit{0%{opacity:0; transform:translate(-50%,-50%) scale(.5)}
+  18%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  78%{opacity:1; transform:translate(-50%,-50%) scale(1)}
+  100%{opacity:0; transform:translate(-50%,-50%) scale(1.3)}}
+
+/* 頁：紙が繰られて飛ぶ */
+.e-page{left:50%; top:var(--oy,44%); width:28vmin; height:36vmin; margin:-18vmin 0 0 -14vmin;
+  background:linear-gradient(120deg, var(--ck2), var(--ck)); border:1px solid var(--ck2); border-radius:3px;
+  transform-origin:0 50%;
+  animation:ePage var(--d,820ms) cubic-bezier(.3,.8,.4,1) both; animation-delay:var(--dl,0ms)}
+@keyframes ePage{0%{opacity:0; transform:perspective(700px) rotateY(0deg)}
+  20%{opacity:.95; transform:perspective(700px) rotateY(-24deg)}
+  100%{opacity:0; transform:perspective(700px) rotateY(-162deg)}}
+
+/* 陽：円盤が昇る */
+.e-sun{left:50%; bottom:var(--by,10%); width:var(--sz,34vmin); height:var(--sz,34vmin); margin-left:calc(var(--sz,34vmin) / -2);
+  border-radius:50%; background:radial-gradient(circle, var(--ck2) 0%, var(--ck) 54%, transparent 78%);
+  box-shadow:0 0 70px var(--ck);
+  animation:eSun var(--d,1000ms) cubic-bezier(.2,.8,.3,1) both}
+@keyframes eSun{0%{opacity:0; transform:translateY(60%) scale(.6)}
+  40%{opacity:1; transform:translateY(0) scale(1)}
+  76%{opacity:1}100%{opacity:0; transform:translateY(-10%) scale(1.1)}}
+.e-sun.dark{background:radial-gradient(circle, rgba(6,4,10,1) 0%, rgba(6,4,10,1) 62%, var(--ck) 70%, transparent 80%)}
+
+/* 茨：縁から伸びる蔓 */
+.e-thorn{left:var(--x,50%); bottom:var(--by,0); width:var(--w,5px); height:var(--h,40vh); margin-left:-2px;
+  background:linear-gradient(to top, var(--ck), var(--ck2)); transform-origin:50% 100%;
+  box-shadow:5px -14px 0 -2px var(--ck), -5px -30px 0 -2px var(--ck), 5px -48px 0 -2px var(--ck);
+  animation:eThorn var(--d,880ms) cubic-bezier(.2,1,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eThorn{0%{opacity:0; transform:scaleY(0) rotate(var(--a,0deg))}
+  34%{opacity:1; transform:scaleY(1) rotate(var(--a,0deg))}
+  80%{opacity:1}100%{opacity:0; transform:scaleY(1.05) rotate(var(--a,0deg))}}
+
+/* 泡：下から湧き上がる */
+.e-bub{left:var(--x,50%); bottom:-6%; width:var(--sz,18px); height:var(--sz,18px); border-radius:50%;
+  border:1px solid var(--ck2); background:radial-gradient(circle at 34% 30%, var(--ck2) 0%, transparent 46%);
+  animation:eBub var(--d,1100ms) ease-in-out both; animation-delay:var(--dl,0ms)}
+@keyframes eBub{0%{opacity:0; transform:translate(0,0) scale(.4)}
+  20%{opacity:1}
+  100%{opacity:0; transform:translate(var(--dx,12px), var(--dy,-80vh)) scale(1.2)}}
+
+/* 渦：ゆるく回る螺旋 */
+.e-swirl{left:50%; top:var(--oy,46%); width:var(--sz,60vmax); height:var(--sz,60vmax);
+  margin:calc(var(--sz,60vmax) / -2) 0 0 calc(var(--sz,60vmax) / -2);
+  background:conic-gradient(from 0deg, transparent 0deg, var(--ck) 40deg, transparent 90deg,
+    var(--ck) 190deg, transparent 240deg, var(--ck) 320deg, transparent 360deg);
+  border-radius:50%; mask-image:radial-gradient(circle, transparent 10%, #000 34%, transparent 72%);
+  -webkit-mask-image:radial-gradient(circle, transparent 10%, #000 34%, transparent 72%);
+  animation:eSwirl var(--d,1100ms) cubic-bezier(.25,.6,.3,1) both}
+@keyframes eSwirl{0%{opacity:0; transform:rotate(0deg) scale(.5)}
+  22%{opacity:1; transform:rotate(110deg) scale(1)}
+  78%{opacity:1}
+  100%{opacity:0; transform:rotate(var(--spin,400deg)) scale(1.2)}}
+.e-swirl.rev{animation-name:eSwirlRev}
+@keyframes eSwirlRev{0%{opacity:0; transform:rotate(var(--spin,400deg)) scale(1.3)}
+  22%{opacity:1; transform:rotate(240deg) scale(1)}
+  74%{opacity:1; transform:rotate(90deg) scale(.7)}
+  100%{opacity:0; transform:rotate(0deg) scale(.35)}}
+
+/* 方陣：奥へ伸びる格子 */
+.e-grid{left:-10%; right:-10%; top:var(--oy,30%); height:60%;
+  background-image:linear-gradient(var(--ck) 1px, transparent 1px), linear-gradient(90deg, var(--ck) 1px, transparent 1px);
+  background-size:var(--cell,44px) var(--cell,44px);
+  mask-image:radial-gradient(ellipse at 50% 46%, #000 0%, transparent 72%);
+  -webkit-mask-image:radial-gradient(ellipse at 50% 46%, #000 0%, transparent 72%);
+  transform-origin:50% 50%;
+  animation:eGrid var(--d,1000ms) ease-out both}
+@keyframes eGrid{0%{opacity:0; transform:perspective(500px) rotateX(74deg) scale(1.6)}
+  24%{opacity:1; transform:perspective(500px) rotateX(62deg) scale(1)}
+  80%{opacity:1; transform:perspective(500px) rotateX(56deg) scale(.96)}
+  100%{opacity:0; transform:perspective(500px) rotateX(50deg) scale(.9)}}
+
+/* 星：四条の煌めき */
+.e-star{left:var(--x,50%); top:var(--y,44%); width:var(--sz,120px); height:var(--sz,120px);
+  margin:calc(var(--sz,120px) / -2) 0 0 calc(var(--sz,120px) / -2);
+  background:var(--ck2); filter:drop-shadow(0 0 14px var(--ck));
+  clip-path:polygon(50% 0,56% 44%,100% 50%,56% 56%,50% 100%,44% 56%,0 50%,44% 44%);
+  animation:eStar var(--d,760ms) cubic-bezier(.2,1.4,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eStar{0%{opacity:0; transform:rotate(var(--a,0deg)) scale(0)}
+  34%{opacity:1; transform:rotate(calc(var(--a,0deg) + 40deg)) scale(1)}
+  100%{opacity:0; transform:rotate(calc(var(--a,0deg) + 90deg)) scale(1.4)}}
+
+/* 周回：中心をめぐる光点 */
+.e-orb{left:50%; top:var(--oy,44%); width:var(--sz,12px); height:var(--sz,12px); margin:-6px 0 0 -6px;
+  background:var(--ck2); border-radius:50%; box-shadow:0 0 14px var(--ck);
+  animation:eOrb var(--d,1100ms) linear both; animation-delay:var(--dl,0ms)}
+@keyframes eOrb{0%{opacity:0; transform:rotate(var(--a,0deg)) translateX(0)}
+  22%{opacity:1; transform:rotate(calc(var(--a,0deg) + 120deg)) translateX(var(--r,18vmin))}
+  78%{opacity:1}
+  100%{opacity:0; transform:rotate(calc(var(--a,0deg) + 520deg)) translateX(var(--r,18vmin))}}
+
+/* 雨：筋が流れる（向きを変えて横風にも使う） */
+.e-rain{left:var(--x,50%); top:var(--y,-10%); width:2px; height:var(--h,90px);
+  background:linear-gradient(to bottom, transparent, var(--ck2)); transform-origin:50% 0;
+  animation:eRain var(--d,700ms) linear both; animation-delay:var(--dl,0ms)}
+@keyframes eRain{0%{opacity:0; transform:rotate(var(--a,0deg)) translateY(0)}
+  16%{opacity:1}
+  100%{opacity:0; transform:rotate(var(--a,0deg)) translateY(var(--len,110vh))}}
+
+/* 煙：もくもく広がる */
+.e-smoke{left:var(--x,50%); top:var(--y,60%); width:var(--sz,120px); height:var(--sz,120px);
+  margin:calc(var(--sz,120px) / -2) 0 0 calc(var(--sz,120px) / -2); border-radius:50%;
+  background:radial-gradient(circle, var(--ck) 0%, transparent 64%); filter:blur(6px);
+  animation:eSmoke var(--d,1100ms) ease-out both; animation-delay:var(--dl,0ms)}
+@keyframes eSmoke{0%{opacity:0; transform:translate(0,0) scale(.3)}
+  26%{opacity:1; transform:translate(calc(var(--dx,0px) * .4), calc(var(--dy,0px) * .4)) scale(1)}
+  100%{opacity:0; transform:translate(var(--dx,0px), var(--dy,0px)) scale(2)}}
+
+/* 牌：四角が順に翻る */
+.e-tile{left:var(--x,50%); top:var(--y,44%); width:var(--sz,54px); height:var(--sz,54px);
+  margin:calc(var(--sz,54px) / -2) 0 0 calc(var(--sz,54px) / -2);
+  background:linear-gradient(140deg, var(--ck2), var(--ck)); border:1px solid var(--ck2); border-radius:6px;
+  animation:eTile var(--d,760ms) cubic-bezier(.2,1.3,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eTile{0%{opacity:0; transform:perspective(500px) rotateY(90deg) scale(.6)}
+  40%{opacity:1; transform:perspective(500px) rotateY(0deg) scale(1)}
+  72%{opacity:1}100%{opacity:0; transform:perspective(500px) rotateY(-90deg) scale(.8)}}
+
+/* 羽：ゆっくり降る */
+.e-feather{left:var(--x,50%); top:var(--y,-6%); width:var(--sz,10px); height:calc(var(--sz,10px) * 3.4);
+  background:linear-gradient(to bottom, var(--ck2), transparent); border-radius:50% 50% 50% 50% / 70% 70% 30% 30%;
+  animation:eFeather var(--d,1300ms) ease-in-out both; animation-delay:var(--dl,0ms)}
+@keyframes eFeather{0%{opacity:0; transform:translate(0,0) rotate(var(--a,0deg))}
+  16%{opacity:1}
+  50%{transform:translate(calc(var(--dx,24px) * .6), calc(var(--dy,70vh) * .5)) rotate(calc(var(--a,0deg) * -1))}
+  100%{opacity:0; transform:translate(var(--dx,24px), var(--dy,70vh)) rotate(var(--a,0deg))}}
+
+/* 帷：上から降りる幕 */
+.e-curtain{left:0; right:0; top:0; height:100%; transform-origin:50% 0;
+  background:linear-gradient(to bottom, var(--bg) 0%, var(--bg) 82%, var(--ck) 100%);
+  animation:eCurtain var(--d,900ms) cubic-bezier(.3,.9,.3,1) both}
+@keyframes eCurtain{0%{opacity:0; transform:scaleY(0)}26%{opacity:1; transform:scaleY(1)}
+  70%{opacity:1; transform:scaleY(1)}100%{opacity:0; transform:scaleY(1)}}
+
+/* 鎖：環が連なって断たれる */
+.e-chain{left:50%; top:var(--oy,44%); width:var(--sz,26px); height:var(--sz,26px); margin:-13px 0 0 -13px;
+  border:3px solid var(--ck2); border-radius:50% / 38%; box-shadow:0 0 8px var(--ck);
+  animation:eChain var(--d,860ms) cubic-bezier(.2,.9,.3,1) both; animation-delay:var(--dl,0ms)}
+@keyframes eChain{0%{opacity:0; transform:rotate(var(--a,0deg)) translateX(calc(var(--r,0px) * .5)) scale(.5)}
+  30%{opacity:1; transform:rotate(var(--a,0deg)) translateX(var(--r,0px)) scale(1)}
+  58%{opacity:1; transform:rotate(var(--a,0deg)) translateX(var(--r,0px)) scale(1)}
+  100%{opacity:0; transform:rotate(var(--a,0deg)) translateX(calc(var(--r,0px) * 1.9)) rotate(220deg) scale(.7)}}
+
+/* 演出の名札（画面上の見出し） */
+.e-name{z-index:4; left:50%; top:9%; transform:translateX(-50%); text-align:center; white-space:nowrap;
+  animation:eName var(--d,1000ms) ease-out both}
+.e-name i{display:block; font-style:normal; font-family:var(--f-display); font-size:19px; font-weight:700;
+  color:var(--ck2); letter-spacing:.3em; text-shadow:0 0 16px var(--ck), 0 2px 0 rgba(0,0,0,.6)}
+.e-name s{display:block; text-decoration:none; font-family:var(--f-type); font-size:9px;
+  color:var(--ck2); opacity:.78; letter-spacing:.34em; margin-top:5px}
+@keyframes eName{0%{opacity:0; transform:translateX(-50%) translateY(10px)}
+  22%{opacity:1; transform:translateX(-50%) translateY(0)}
+  76%{opacity:1}100%{opacity:0; transform:translateX(-50%) translateY(-8px)}}
+
+/* 演出の最後に出るカード */
+.e-card{left:50%; top:46%; transform:translate(-50%,-50%); z-index:3; filter:drop-shadow(0 10px 26px rgba(0,0,0,.6))}
+.e-card .card{width:104px; height:146px}
+.e-card.big .card{width:132px; height:186px}
+
 @media (prefers-reduced-motion:reduce){
   *{animation-duration:.01ms!important; animation-iteration-count:1!important; transition-duration:.01ms!important}
 }
@@ -1202,6 +1622,7 @@ select,input[type=text]{
         <button class="sign" data-go="matchup"><span class="k">MATCHUP</span><span class="d">相性検証（自動対戦で解析）</span></button>
         <button class="sign" data-go="record"><span class="k">RECORD</span><span class="d">自分の戦績から相性表をつくる</span></button>
         <button class="sign" data-go="updates"><span class="k">UPDATES</span><span class="d">カードの調整履歴</span></button>
+        <button class="sign" data-go="entryfx"><span class="k">ENTRY FX</span><span class="d">登場演出の一覧</span></button>
         <button class="sign" data-go="cards"><span class="k">CARDS</span><span class="d">カード一覧・詳細</span></button>
         <button class="sign" data-go="rule"><span class="k">RULE</span><span class="d">ルールブック</span></button>
       </nav>
@@ -1512,6 +1933,23 @@ select,input[type=text]{
     <div class="scroll">
       <p class="note">カードとルールを直した記録。新しいものが上。カード名を押すと、そのカードの詳しい説明が開く。</p>
       <div id="updateList"></div>
+    </div>
+  </section>
+
+  <!-- ============ ENTRY FX（登場演出の一覧） ============ -->
+  <section class="screen" id="sc-entryfx" hidden>
+    <div class="bar">
+      <button class="btn sm" data-go="home">&#9664; HOME</button>
+      <h2>登場演出</h2>
+      <span class="tag" id="efxTag">0 FX</span>
+    </div>
+    <div class="scroll">
+      <p class="note">一部のカードは、場に出る前に専用の演出が流れる。札を押すとその演出を見られる。</p>
+      <div class="efxbar">
+        <button class="btn sm" id="efxAll" type="button">&#9654; 続けて再生</button>
+        <button class="btn sm ghost" id="efxStop" type="button" hidden>&#9632; 止める</button>
+      </div>
+      <div class="efxgrid" id="efxList"></div>
     </div>
   </section>
 
@@ -1826,7 +2264,7 @@ const BGM_TRACKS = {
 /* 画面と曲の対応。ここに無い画面は「出立の支度」を流す */
 const BGM_FOR_SCREEN = {
   home: 'home', setup: 'menu', twopick: 'menu', pickrun: 'menu', community: 'menu', format: 'menu',
-  deck: 'deck', cards: 'deck', rule: 'rule', updates: 'rule', matchup: 'matchup', record: 'matchup', battle: 'battle'
+  deck: 'deck', cards: 'deck', rule: 'rule', updates: 'rule', entryfx: 'rule', matchup: 'matchup', record: 'matchup', battle: 'battle'
 };
 
 /* 音楽全体の音量と、これ以上は大きくしない上限。
@@ -11580,6 +12018,7 @@ async function playCard(uid, slotIdx) {
   await runHandHook('handCardPlayed', p.idx, { played: c });  // 手札で働く（プレイ連動）
   if (c._grown) await runBadges(p.idx, 'growthPlayed', { card: c });   // 「成長でプレイするたび」のバッジ効果
   if (c.type === 'spell') {
+    await FX.entry(c.cardId, null);                 // 専用の登場演出。効果が働く前に見せる
     p.grave.push(c);
     pushLog(`${p.name} は ${c.name} を使用`);
     UI.renderBattle();
@@ -11615,7 +12054,12 @@ async function enterBoard(c, pIdx, slotIdx, fromHand, reason) {
   const p = G.players[pIdx];
   if (p.board.length >= RULES.boardMax) { pushLog(`場が満杯で ${c.name} を出せない`); return; }
   /* 普通にプレイしたとき以外は、出てくる前に登場の演出を見せる */
-  const shown = fromHand ? false : await FX.cast(c.cardId, reason || 'effect', boardSelFor(pIdx));
+  /* 専用の登場演出を持つ札は、出方にかかわらずそれを見せる。
+     ent は true（演出した）／'skip'（続けて出したので省いた）／false（専用の演出がない）。 */
+  const ent = await FX.entry(c.cardId, boardSelFor(pIdx));
+  const shown = ent === true ? true
+    : (ent === 'skip' || fromHand) ? false
+    : await FX.cast(c.cardId, reason || 'effect', boardSelFor(pIdx));
   c.summonedThisTurn = true; c.attacksLeft = c.type === 'follower' ? 1 : 0;
   const at = clamp(slotIdx == null ? p.board.length : slotIdx, 0, p.board.length);
   p.board.splice(at, 0, c);
@@ -12740,6 +13184,29 @@ function aiTotals(keys) {
    card を書くと、その名前からカードを引いて詳しい説明を開けるようにする。 */
 const UPDATES = [
   {
+    date: '2026-11-07',
+    title: '登場演出の追加（47枚・43種）',
+    note: '一部のカードに、場に出る前に流れる専用の演出を付けた。演出が終わってからカードが場に出る（スペルは効果が働く前）。'
+      + 'ホームの ENTRY FX から、どの演出も単体で見られる。能力は何も変えていない。',
+    groups: [
+      {
+        head: '決まりごと',
+        items: [
+          { kind: 'new', name: '登場演出',
+            text: '47枚のカードに43種類の専用演出を付けた。演出はカードが場に出る前に流れ、終わってから場に出る。'
+              + 'スペルの場合は効果が働く前に流れる。同じ札を続けて出したときは、2枚目以降の演出を省いてテンポを保つ。',
+            why: '強い札が出てくる瞬間に重みを持たせるため。' },
+          { kind: 'new', name: 'ENTRY FX（演出一覧）',
+            text: 'ホームから開ける新しいページ。43種の演出を並べ、押すとその演出だけを見られる。「続けて再生」で全部を順に流せる。',
+            why: '演出をまとめて見比べられるようにするため。' },
+          { kind: 'rule', name: '動きを抑える設定',
+            text: '端末側で動きを抑える設定にしているときは、登場演出を流さずすぐにカードが出るようにした。',
+            why: '画面の動きが苦手な人にも遊べるようにするため。' }
+        ]
+      }
+    ]
+  },
+  {
     date: '2026-11-02',
     title: '能力調整25件と、威圧・覇気の決まり',
     note: '守りに回りながら顔を殴れる札と、数字が高すぎた札を中心に下げた。合わせて、伸び悩んでいた軸をいくつか押し上げている。',
@@ -13003,6 +13470,627 @@ async function runMatchupAnalysis(games, onProgress, ver) {
 }
 
 /* ---------------------------------------------------------------- [4] 演出 */
+/* ================= 登場演出 =================
+   一部のカードは、場に出る前に専用の演出が流れる。
+   作りは二段で、
+     ・EFX_PARTS … 画面を使う小さな部品（幕・光柱・輪・破片…）
+     ・ENTRY_FX  … 札ごとの演出。部品の並べ方と色と長さだけを書く
+   部品は .efx の中に絶対位置で置かれ、動きは CSS の @keyframes が受け持つ。
+   演出が終わってからカードが場に出る（スペルは効果が働く前）。 */
+
+const EFX_R = (a, b) => a + Math.random() * (b - a);         // 範囲内の乱数
+/* 部品をひとつ置く。vars は CSS 変数（--d や --x など）として渡す。 */
+function efxAdd(stage, cls, vars) {
+  const n = el('div', cls);
+  if (vars) for (const k in vars) { if (vars[k] != null) n.style.setProperty('--' + k, vars[k]); }
+  stage.appendChild(n);
+  return n;
+}
+/* 部品の作り方。o はその演出での指定、S は演出そのものの設定（色や長さ）。 */
+const EFX_PARTS = {
+  /* 画面全体の色の沈み */
+  veil(st, o) { efxAdd(st, 'e-veil', { d: (o.d || 1000) + 'ms' }); },
+  /* 一瞬の閃光。n 回つづけて光らせることもできる */
+  pulse(st, o) {
+    for (let i = 0; i < (o.n || 1); i++) efxAdd(st, 'e-pulse', { d: (o.d || 520) + 'ms', dl: (o.dl || 0) + i * (o.gap || 150) + 'ms' });
+  },
+  /* 縦に伸びる光柱 */
+  beam(st, o) {
+    const n = o.n || 1;
+    for (let i = 0; i < n; i++) {
+      const x = n === 1 ? (o.x || '50%') : (12 + (76 / Math.max(1, n - 1)) * i) + '%';
+      efxAdd(st, 'e-beam', { d: (o.d || 800) + 'ms', dl: (o.dl || 0) + i * (o.gap || 70) + 'ms', x, w: (o.w || 110) + 'px' });
+    }
+  },
+  /* 中心から外へ伸びる光条 */
+  ray(st, o) {
+    const n = o.n || 8;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-ray', {
+      d: (o.d || 760) + 'ms', dl: (o.dl || 0) + i * (o.gap || 28) + 'ms',
+      a: ((o.from || 0) + 360 / n * i) + 'deg', len: (o.len || 42) + 'vmax', oy: (o.oy || 46) + '%'
+    });
+  },
+  /* 広がる輪（rev:true で縮む輪、hex:true で六角） */
+  ring(st, o) {
+    const n = o.n || 3;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-ring' + (o.rev ? ' rev' : '') + (o.hex ? ' hex' : ''), {
+      d: (o.d || 780) + 'ms', dl: (o.dl || 0) + i * (o.gap || 120) + 'ms',
+      sz: (o.sz || 120) + 'px', to: o.to || 5, bw: (o.bw || 2) + 'px', oy: (o.oy || 46) + '%'
+    });
+  },
+  /* 飛び散る破片 */
+  shard(st, o) {
+    const n = o.n || 12;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-shard', {
+      d: (o.d || 700) + 'ms', dl: (o.dl || 0) + i * 14 + 'ms',
+      a: (360 / n * i + EFX_R(-10, 10)) + 'deg', len: EFX_R(18, o.len || 34) + 'vmax', sz: EFX_R(9, o.sz || 20) + 'px', oy: (o.oy || 46) + '%'
+    });
+  },
+  /* 漂う粒。dir は up／down／out／in */
+  mote(st, o) {
+    const n = o.n || 14, dir = o.dir || 'up';
+    for (let i = 0; i < n; i++) {
+      const x = EFX_R(8, 92), y = dir === 'down' ? EFX_R(-6, 14) : dir === 'up' ? EFX_R(62, 100) : EFX_R(26, 68);
+      let dx = EFX_R(-40, 40), dy = dir === 'up' ? EFX_R(-80, -26) : dir === 'down' ? EFX_R(40, 90) : EFX_R(-50, 50);
+      if (dir === 'out') { const a = Math.PI * 2 * i / n; dx = Math.cos(a) * EFX_R(120, 240); dy = Math.sin(a) * EFX_R(120, 240); }
+      if (dir === 'in') { const a = Math.PI * 2 * i / n; dx = -Math.cos(a) * 200; dy = -Math.sin(a) * 200; }
+      efxAdd(st, 'e-mote', {
+        d: (o.d || 1000) + 'ms', dl: (o.dl || 0) + i * 24 + 'ms',
+        x: (dir === 'in' ? 50 + Math.cos(Math.PI * 2 * i / n) * 34 : x) + '%',
+        y: (dir === 'in' ? 46 + Math.sin(Math.PI * 2 * i / n) * 30 : y) + '%',
+        dx: dx.toFixed(0) + 'px', dy: dy.toFixed(0) + 'px', sz: EFX_R(3, o.sz || 7).toFixed(1) + 'px'
+      });
+    }
+  },
+  /* 走る斬撃 */
+  slash(st, o) {
+    const n = o.n || 1, as = o.angles || null;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-slash', {
+      d: (o.d || 420) + 'ms', dl: (o.dl || 0) + i * (o.gap || 110) + 'ms',
+      a: (as ? as[i % as.length] : (o.a != null ? o.a : -24) + i * 36) + 'deg', bw: (o.bw || 4) + 'px', len: (o.len || 150) + 'vmax'
+    });
+  },
+  /* 画面が上下に割れて開く */
+  split(st, o) {
+    efxAdd(st, 'e-panel t', { d: (o.d || 900) + 'ms' });
+    efxAdd(st, 'e-panel b', { d: (o.d || 900) + 'ms' });
+  },
+  /* 円が閉じる（out:true で開く） */
+  iris(st, o) { efxAdd(st, 'e-iris' + (o.out ? ' out' : ''), { d: (o.d || 900) + 'ms' }); },
+  /* 文字や記号が円く並ぶ。t に並べる文字を渡す */
+  glyph(st, o) {
+    const t = (o.t || '✦✧✶✷').split(''), n = o.n || t.length;
+    for (let i = 0; i < n; i++) {
+      const g = efxAdd(st, 'e-glyph', {
+        d: (o.d || 900) + 'ms', dl: (o.dl || 0) + i * (o.gap || 50) + 'ms',
+        a: (360 / n * i + (o.from || 0)) + 'deg', r: (o.r != null ? o.r : -120) + 'px',
+        sz: (o.sz || 20) + 'px', spin: (o.spin || 0) + 'deg', oy: (o.oy || 46) + '%'
+      });
+      g.textContent = t[i % t.length];
+    }
+  },
+  /* 下から立つ壁 */
+  wall(st, o) {
+    const n = o.n || 5;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-wall', {
+      d: (o.d || 780) + 'ms', dl: (o.dl || 0) + i * (o.gap || 60) + 'ms',
+      x: (10 + 80 / Math.max(1, n - 1) * i) + '%', w: (o.w || 68) + 'px', h: EFX_R(o.hmin || 22, o.h || 44) + 'vh'
+    });
+  },
+  /* 左右に開く翼 */
+  wing(st, o) {
+    efxAdd(st, 'e-wing', { d: (o.d || 860) + 'ms', oy: (o.oy || 42) + '%' });
+    efxAdd(st, 'e-wing r', { d: (o.d || 860) + 'ms', oy: (o.oy || 42) + '%' });
+  },
+  /* 転がる骰子。pips で出た目を決める */
+  die(st, o) {
+    const pips = o.pips || [3, 4];
+    pips.forEach((v, i) => {
+      const d = efxAdd(st, 'e-die', { d: (o.d || 900) + 'ms', dl: (o.dl || 0) + i * (o.gap || 120) + 'ms', x: (38 + i * 24) + '%', oy: (o.oy || 42) + '%' });
+      d.textContent = v;
+    });
+  },
+  /* 時計の面と針 */
+  dial(st, o) {
+    efxAdd(st, 'e-dial', { d: (o.d || 1000) + 'ms', oy: (o.oy || 44) + '%' });
+    efxAdd(st, 'e-hand', { d: (o.d || 1000) + 'ms', dl: (o.dl || 0) + 'ms', a: (o.a != null ? o.a : 250) + 'deg', oy: (o.oy || 44) + '%' });
+  },
+  /* 下から満ちる水面 */
+  tide(st, o) { efxAdd(st, 'e-tide' + (o.half ? ' ' + o.half : ''), { d: (o.d || 1000) + 'ms' }); },
+  /* 舞う花弁 */
+  petal(st, o) {
+    const n = o.n || 16, up = o.dir === 'up';
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-petal', {
+      d: (o.d || 1100) + 'ms', dl: (o.dl || 0) + i * (o.gap || 42) + 'ms',
+      x: EFX_R(4, 96) + '%', y: (up ? EFX_R(70, 104) : EFX_R(-12, 10)) + '%',
+      dx: EFX_R(-70, 70).toFixed(0) + 'px', dy: (up ? EFX_R(-70, -40) : EFX_R(54, 86)).toFixed(0) + 'vh',
+      spin: EFX_R(200, 720).toFixed(0) + 'deg', sz: EFX_R(9, o.sz || 16).toFixed(0) + 'px'
+    });
+  },
+  /* 噛み合って回る歯車 */
+  gear(st, o) {
+    const n = o.n || 3;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-gear', {
+      d: (o.d || 1000) + 'ms', dl: (o.dl || 0) + i * (o.gap || 90) + 'ms',
+      x: (26 + 24 * i) + '%', y: (36 + (i % 2) * 18) + '%',
+      sz: (o.sz || 96) - i * 14 + 'px', bw: (o.bw || 8) + 'px',
+      half: (i % 2 ? -90 : 90) + 'deg', spin: (i % 2 ? -1 : 1) * (o.spin || 400) + 'deg'
+    });
+  },
+  /* 降って積もる金貨 */
+  coin(st, o) {
+    const n = o.n || 18;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-coin', {
+      d: (o.d || 900) + 'ms', dl: (o.dl || 0) + i * (o.gap || 48) + 'ms',
+      x: EFX_R(8, 92) + '%', dy: EFX_R(58, 82).toFixed(0) + 'vh', sz: EFX_R(14, o.sz || 28).toFixed(0) + 'px'
+    });
+  },
+  /* 突き降りる槍 */
+  lance(st, o) {
+    const n = o.n || 1;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-lance', {
+      d: (o.d || 620) + 'ms', dl: (o.dl || 0) + i * (o.gap || 90) + 'ms',
+      x: o.x != null && n === 1 ? o.x : (n === 1 ? 50 : 20 + 60 / Math.max(1, n - 1) * i) + '%', w: (o.w || 10) + 'px', h: (o.h || 56) + 'vh'
+    });
+  },
+  /* 鏡の面 */
+  pane(st, o) { efxAdd(st, 'e-pane', { d: (o.d || 900) + 'ms', oy: (o.oy || 44) + '%' }); },
+  /* 落ちる雷 */
+  bolt(st, o) {
+    const n = o.n || 2;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-bolt', {
+      d: (o.d || 520) + 'ms', dl: (o.dl || 0) + i * (o.gap || 130) + 'ms',
+      x: EFX_R(20, 80) + '%', w: EFX_R(30, 60).toFixed(0) + 'px', h: EFX_R(40, 58).toFixed(0) + 'vh'
+    });
+  },
+  /* 立ち上がる炎 */
+  flame(st, o) {
+    const n = o.n || 3;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-flame', {
+      d: (o.d || 1000) + 'ms', dl: (o.dl || 0) + i * (o.gap || 110) + 'ms',
+      x: o.x != null ? o.x : (n === 1 ? 50 : 14 + 72 / Math.max(1, n - 1) * i) + '%', w: (o.w || 130) + 'px', h: EFX_R(o.hmin || 34, o.h || 58) + 'vh'
+    });
+  },
+  /* 桁が回って止まる数字。seq に見せる並びを渡す */
+  digit(st, o) {
+    const seq = o.seq || ['0'], d = (o.d || 1000), span = d * .68;
+    const n = efxAdd(st, 'e-digit', { d: d + 'ms', sz: (o.sz || 66) + 'px', oy: (o.oy || 40) + '%' });
+    n.textContent = seq[0];
+    seq.forEach((v, i) => { if (i) setTimeout(() => { n.textContent = v; }, span / seq.length * i); });
+  },
+  /* 繰られる頁 */
+  page(st, o) {
+    const n = o.n || 5;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-page', { d: (o.d || 820) + 'ms', dl: (o.dl || 0) + i * (o.gap || 110) + 'ms', oy: (o.oy || 44) + '%' });
+  },
+  /* 昇る陽（dark:true で蝕んだ陽） */
+  sun(st, o) { efxAdd(st, 'e-sun' + (o.dark ? ' dark' : ''), { d: (o.d || 1000) + 'ms', sz: (o.sz || 34) + 'vmin', by: (o.by != null ? o.by : 10) + '%' }); },
+  /* 縁から伸びる茨 */
+  thorn(st, o) {
+    const n = o.n || 7;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-thorn', {
+      d: (o.d || 880) + 'ms', dl: (o.dl || 0) + i * (o.gap || 70) + 'ms',
+      x: (6 + 88 / Math.max(1, n - 1) * i) + '%', h: EFX_R(24, o.h || 50) + 'vh',
+      a: EFX_R(-16, 16).toFixed(0) + 'deg', w: (o.w || 5) + 'px'
+    });
+  },
+  /* 湧き上がる泡 */
+  bub(st, o) {
+    const n = o.n || 14;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-bub', {
+      d: (o.d || 1100) + 'ms', dl: (o.dl || 0) + i * (o.gap || 60) + 'ms',
+      x: EFX_R(6, 94) + '%', dx: EFX_R(-30, 30).toFixed(0) + 'px', dy: -EFX_R(50, 92).toFixed(0) + 'vh',
+      sz: EFX_R(8, o.sz || 28).toFixed(0) + 'px'
+    });
+  },
+  /* 回る渦（rev:true で吸い込む） */
+  swirl(st, o) { efxAdd(st, 'e-swirl' + (o.rev ? ' rev' : ''), { d: (o.d || 1100) + 'ms', sz: (o.sz || 60) + 'vmax', spin: (o.spin || 400) + 'deg' }); },
+  /* 奥へ伸びる格子 */
+  grid(st, o) { efxAdd(st, 'e-grid', { d: (o.d || 1000) + 'ms', cell: (o.cell || 44) + 'px', oy: (o.oy || 30) + '%' }); },
+  /* 煌めく星 */
+  star(st, o) {
+    const n = o.n || 1;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-star', {
+      d: (o.d || 760) + 'ms', dl: (o.dl || 0) + i * (o.gap || 90) + 'ms',
+      x: (n === 1 ? 50 : EFX_R(14, 86)) + '%', y: (n === 1 ? (o.oy || 44) : EFX_R(20, 70)) + '%',
+      sz: (o.sz || 120) - i * 10 + 'px', a: EFX_R(0, 90).toFixed(0) + 'deg'
+    });
+  },
+  /* 中心をめぐる光点 */
+  orb(st, o) {
+    const n = o.n || 6;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-orb', {
+      d: (o.d || 1100) + 'ms', dl: (o.dl || 0) + i * (o.gap || 60) + 'ms',
+      a: (360 / n * i) + 'deg', r: (o.r || 18) + 'vmin', sz: (o.sz || 12) + 'px', oy: (o.oy || 44) + '%'
+    });
+  },
+  /* 流れる筋（a を変えれば横風にもなる） */
+  rain(st, o) {
+    const n = o.n || 18;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-rain', {
+      d: (o.d || 700) + 'ms', dl: (o.dl || 0) + i * (o.gap || 36) + 'ms',
+      x: EFX_R(-4, 104) + '%', y: EFX_R(-16, (o.ymax != null ? o.ymax : 10)) + '%',
+      a: (o.a != null ? o.a : 0) + 'deg', h: EFX_R(50, o.h || 130).toFixed(0) + 'px', len: (o.len || 120) + 'vh'
+    });
+  },
+  /* 広がる煙 */
+  smoke(st, o) {
+    const n = o.n || 7;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-smoke', {
+      d: (o.d || 1100) + 'ms', dl: (o.dl || 0) + i * (o.gap || 80) + 'ms',
+      x: EFX_R(10, 90) + '%', y: EFX_R(o.ymin || 44, o.ymax || 88) + '%',
+      dx: EFX_R(-90, 90).toFixed(0) + 'px', dy: EFX_R(-80, -10).toFixed(0) + 'px', sz: EFX_R(90, o.sz || 200).toFixed(0) + 'px'
+    });
+  },
+  /* 順に翻る牌 */
+  tile(st, o) {
+    const n = o.n || 9;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-tile', {
+      d: (o.d || 760) + 'ms', dl: (o.dl || 0) + i * (o.gap || 60) + 'ms',
+      x: (16 + (i % 5) * 17) + '%', y: (28 + Math.floor(i / 5) * 20) + '%', sz: (o.sz || 54) + 'px'
+    });
+  },
+  /* ゆっくり降る羽 */
+  feather(st, o) {
+    const n = o.n || 12;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-feather', {
+      d: (o.d || 1300) + 'ms', dl: (o.dl || 0) + i * (o.gap || 70) + 'ms',
+      x: EFX_R(6, 94) + '%', y: EFX_R(-16, 8) + '%',
+      dx: EFX_R(-80, 80).toFixed(0) + 'px', dy: EFX_R(52, 86).toFixed(0) + 'vh',
+      a: EFX_R(-50, 50).toFixed(0) + 'deg', sz: EFX_R(7, o.sz || 14).toFixed(0) + 'px'
+    });
+  },
+  /* 上から降りる帷 */
+  curtain(st, o) { efxAdd(st, 'e-curtain', { d: (o.d || 900) + 'ms' }); },
+  /* 連なって断たれる鎖 */
+  chain(st, o) {
+    const n = o.n || 10;
+    for (let i = 0; i < n; i++) efxAdd(st, 'e-chain', {
+      d: (o.d || 860) + 'ms', dl: (o.dl || 0) + i * (o.gap || 36) + 'ms',
+      a: (360 / n * i) + 'deg', r: (o.r || 90) + 'px', sz: (o.sz || 26) + 'px', oy: (o.oy || 44) + '%'
+    });
+  }
+};
+
+/* 札ごとの登場演出。
+   name／kana は画面に出る名札、ck／ck2／bg は色、
+   ms は演出の長さ、shake は画面をどれだけ揺らすか、sfx は鳴らす音、
+   parts は上の部品の並び（[部品名, 指定] の配列）。 */
+const ENTRY_FX = {
+  /* ---- 最果ての王・サタン：世界が終わる ---- */
+  doom: {
+    name: '終焉', kana: 'DOOM', ck: 'rgba(206,64,46,.62)', ck2: 'rgba(255,214,180,.95)', bg: 'rgba(14,2,4,.9)',
+    ms: 1500, shake: 3, sfx: 'lose', big: true,
+    parts: [['veil', { d: 1500 }], ['iris', { d: 1300 }], ['ring', { n: 4, gap: 150, bw: 3, to: 7, d: 1100 }],
+      ['mote', { n: 22, dir: 'up', d: 1400 }], ['pulse', { n: 2, gap: 420, dl: 300 }]]
+  },
+  /* ---- アポカリプス配下・カルギデンスラ：何もないところから湧く ---- */
+  void: {
+    name: '虚無', kana: 'VOID', ck: 'rgba(120,96,170,.5)', ck2: 'rgba(222,206,255,.9)', bg: 'rgba(6,4,12,.86)',
+    ms: 1200, sfx: 'vanish',
+    parts: [['veil', { d: 1200 }], ['swirl', { rev: true, d: 1200, spin: 560, sz: 72 }],
+      ['mote', { n: 20, dir: 'in', d: 1050 }], ['ring', { n: 3, rev: true, gap: 150, bw: 3, d: 1000 }],
+      ['iris', { dl: 480, d: 700 }]]
+  },
+  /* ---- 竜血の咆哮・アルビオンバハムート：空が裂ける ---- */
+  rift: {
+    name: '断裂', kana: 'RIFT', ck: 'rgba(224,138,70,.56)', ck2: 'rgba(255,236,196,.95)', bg: 'rgba(10,6,10,.88)',
+    ms: 1250, shake: 2, sfx: 'rumble',
+    parts: [['split', { d: 1250 }], ['slash', { n: 3, angles: [-8, -2, 4], gap: 90, bw: 6, d: 520 }],
+      ['beam', { n: 3, gap: 110, dl: 240, d: 900 }], ['shard', { n: 14, dl: 300, d: 800 }]]
+  },
+  /* ---- 砂塵の銃王・ベルテゾール：砂嵐のなかから ---- */
+  duststorm: {
+    name: '砂塵', kana: 'DUSTSTORM', ck: 'rgba(196,158,96,.5)', ck2: 'rgba(246,230,190,.9)', bg: 'rgba(28,20,10,.8)',
+    ms: 1300, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1300 }], ['smoke', { n: 9, d: 1300, gap: 90 }],
+      ['rain', { n: 22, a: 74, d: 760, gap: 30, h: 90, len: 140 }], ['mote', { n: 14, dir: 'out', d: 1100 }]]
+  },
+  /* ---- 天焔の執行者・イランツァ：天から降りてくる ---- */
+  descent: {
+    name: '降臨', kana: 'DESCENT', ck: 'rgba(240,206,130,.58)', ck2: 'rgba(255,250,228,.96)', bg: 'rgba(10,8,16,.8)',
+    ms: 1350, sfx: 'summon',
+    parts: [['veil', { d: 1350 }], ['beam', { d: 1100, w: 180 }], ['ring', { n: 3, rev: true, gap: 150, d: 950, oy: 44 }],
+      ['feather', { n: 12, d: 1300 }], ['star', { dl: 460 }]]
+  },
+  /* ---- キングの聖杯：封を解く ---- */
+  unseal: {
+    name: '封印解除', kana: 'UNSEAL', ck: 'rgba(150,216,210,.54)', ck2: 'rgba(236,255,252,.95)', bg: 'rgba(6,14,16,.82)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['chain', { n: 10, d: 1000 }], ['glyph', { t: '封印解除', n: 4, r: -140, sz: 26, d: 1000, spin: 90 }],
+      ['ring', { n: 2, gap: 170, dl: 420, d: 850 }], ['star', { dl: 620 }]]
+  },
+  /* ---- エクスプロージョン：爆ぜる ---- */
+  blast: {
+    name: '爆燃', kana: 'BLAST', ck: 'rgba(238,120,52,.6)', ck2: 'rgba(255,240,198,.98)', bg: 'rgba(16,6,2,.84)',
+    ms: 1150, shake: 3, sfx: 'shot',
+    parts: [['pulse', { d: 620 }], ['ray', { n: 12, d: 860, len: 50 }], ['shard', { n: 18, d: 900, len: 42 }],
+      ['flame', { n: 3, dl: 160, d: 950, h: 44 }], ['smoke', { n: 6, dl: 220, d: 1050 }]]
+  },
+  /* ---- 煉獄の竜・アジュラフリート：火刑の柱 ---- */
+  pyre: {
+    name: '火刑', kana: 'PYRE', ck: 'rgba(222,86,40,.58)', ck2: 'rgba(255,224,170,.95)', bg: 'rgba(18,4,2,.86)',
+    ms: 1300, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1300 }], ['flame', { n: 5, gap: 90, d: 1200, h: 62 }],
+      ['mote', { n: 20, dir: 'up', d: 1200 }], ['ring', { n: 2, gap: 200, dl: 300, d: 900 }]]
+  },
+  /* ---- 蝕月の魔女・エズディア：月が欠ける ---- */
+  eclipse: {
+    name: '月蝕', kana: 'ECLIPSE', ck: 'rgba(188,160,236,.52)', ck2: 'rgba(240,232,255,.94)', bg: 'rgba(4,4,12,.9)',
+    ms: 1400, sfx: 'vanish',
+    parts: [['veil', { d: 1400 }], ['sun', { d: 1300, sz: 40, by: 24 }], ['sun', { dark: true, d: 1300, sz: 38, by: 26 }],
+      ['ring', { n: 2, gap: 220, dl: 420, bw: 3, to: 4, d: 950, oy: 40 }], ['mote', { n: 14, dir: 'out', d: 1200, dl: 300 }]]
+  },
+  /* ---- 堕天の君・ベリアル：翼を失って落ちる ---- */
+  fallen: {
+    name: '墜天', kana: 'FALLEN', ck: 'rgba(168,110,200,.54)', ck2: 'rgba(248,232,255,.95)', bg: 'rgba(8,4,14,.88)',
+    ms: 1400, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1400 }], ['wing', { d: 900, oy: 38 }], ['feather', { n: 16, dl: 360, d: 1200 }],
+      ['beam', { dl: 300, d: 900, w: 90 }], ['pulse', { dl: 760 }]]
+  },
+  /* ---- 慈愛の凛華・オルテニア：花がひらく ---- */
+  bloom: {
+    name: '花開', kana: 'BLOOM', ck: 'rgba(238,154,180,.5)', ck2: 'rgba(255,242,248,.95)', bg: 'rgba(16,8,14,.74)',
+    ms: 1250, sfx: 'chime',
+    parts: [['veil', { d: 1250 }], ['ring', { n: 3, gap: 130, bw: 3, to: 4, d: 950 }],
+      ['petal', { n: 26, dir: 'up', d: 1200, gap: 34, sz: 18 }], ['star', { n: 3, gap: 120, dl: 340, d: 720, sz: 78 }]]
+  },
+  /* ---- 古き天書・リアントース：書が開かれる ---- */
+  codex: {
+    name: '開冊', kana: 'CODEX', ck: 'rgba(214,186,124,.52)', ck2: 'rgba(252,244,220,.95)', bg: 'rgba(12,10,8,.84)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['page', { n: 9, gap: 95, d: 820 }],
+      ['glyph', { t: '古天書記', n: 4, r: -118, sz: 22, d: 1000, dl: 320, oy: 58 }], ['beam', { n: 2, dl: 520, d: 760 }]]
+  },
+  /* ---- 散華の弾幕・シャクドウ：花びらが散る ---- */
+  scatter: {
+    name: '散華', kana: 'SCATTER', ck: 'rgba(222,118,128,.52)', ck2: 'rgba(255,236,236,.94)', bg: 'rgba(12,6,8,.8)',
+    ms: 1200, shake: 1, sfx: 'shot',
+    parts: [['veil', { d: 1200 }], ['petal', { n: 24, d: 1150, gap: 32 }],
+      ['slash', { n: 3, angles: [-40, 16, 62], gap: 90, bw: 3, d: 420 }], ['mote', { n: 12, dir: 'out', d: 900, dl: 240 }]]
+  },
+  /* ---- 停輪の天使・ゼラエル：時の輪が止まる ---- */
+  wheel: {
+    name: '停輪', kana: 'WHEEL', ck: 'rgba(160,200,235,.5)', ck2: 'rgba(240,250,255,.95)', bg: 'rgba(6,10,16,.84)',
+    ms: 1400, sfx: 'chime',
+    parts: [['veil', { d: 1400 }], ['dial', { d: 1350, a: 236 }], ['grid', { d: 1200, cell: 54 }],
+      ['ring', { n: 2, gap: 200, rev: true, d: 1000 }], ['pulse', { dl: 880 }]]
+  },
+  /* ---- 黄金錬成・シンセライズ：金が積み上がる ---- */
+  goldpile: {
+    name: '金山', kana: 'GOLD', ck: 'rgba(236,194,96,.56)', ck2: 'rgba(255,246,214,.96)', bg: 'rgba(16,12,4,.8)',
+    ms: 1250, sfx: 'chime',
+    parts: [['veil', { d: 1250 }], ['coin', { n: 24, d: 1000, gap: 40 }], ['gear', { n: 2, d: 1100, sz: 84 }],
+      ['star', { dl: 640 }]]
+  },
+  /* ---- 呪詞の魔女・ジンジャー：呪いの言葉が渦巻く ---- */
+  curse: {
+    name: '呪詞', kana: 'CURSE', ck: 'rgba(126,186,122,.5)', ck2: 'rgba(226,255,220,.92)', bg: 'rgba(4,10,6,.88)',
+    ms: 1300, sfx: 'vanish',
+    parts: [['veil', { d: 1300 }], ['swirl', { d: 1250, spin: 520 }],
+      ['glyph', { t: '呪詞呪詞呪詞', n: 6, r: -120, sz: 20, spin: 180, d: 1100 }],
+      ['smoke', { n: 6, d: 1200, ymin: 50 }]]
+  },
+  /* ---- 絶尽の射手・ライオ：数が尽きる ---- */
+  zerocount: {
+    name: '絶尽', kana: 'ZERO', ck: 'rgba(214,126,110,.52)', ck2: 'rgba(255,230,222,.95)', bg: 'rgba(10,6,6,.84)',
+    ms: 1200, shake: 1, sfx: 'shot',
+    parts: [['veil', { d: 1200 }], ['digit', { seq: ['6', '5', '4', '3', '2', '1', '0'], d: 1150, sz: 86 }],
+      ['ring', { n: 3, gap: 130, rev: true, d: 1000 }], ['pulse', { dl: 820 }]]
+  },
+  /* ---- 術式の継承者・セフィー：魔法陣を描く ---- */
+  sigil: {
+    name: '術式', kana: 'SIGIL', ck: 'rgba(150,186,236,.5)', ck2: 'rgba(236,246,255,.95)', bg: 'rgba(6,8,16,.84)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['grid', { d: 1250, cell: 38 }],
+      ['glyph', { t: '術式継承', n: 8, r: -140, sz: 18, spin: 120, d: 1150 }],
+      ['ring', { n: 3, gap: 140, bw: 1, to: 3, d: 1000 }], ['star', { dl: 700 }]]
+  },
+  /* ---- 断頭の処刑人・サガツマツ：一刀 ---- */
+  behead: {
+    name: '断頭', kana: 'BEHEAD', ck: 'rgba(196,74,64,.56)', ck2: 'rgba(255,240,236,.98)', bg: 'rgba(10,2,4,.88)',
+    ms: 1000, shake: 3, sfx: 'shot',
+    parts: [['slash', { n: 1, a: -16, bw: 10, d: 380 }], ['pulse', { dl: 260, d: 420 }],
+      ['split', { dl: 280, d: 720 }], ['shard', { n: 10, dl: 320, d: 700, len: 28 }]]
+  },
+  /* ---- 丁半鬼・クキシロ：骰子を振る ---- */
+  dicebet: {
+    name: '丁半', kana: 'DICE', ck: 'rgba(232,172,92,.54)', ck2: 'rgba(255,244,214,.96)', bg: 'rgba(12,8,6,.82)',
+    ms: 1250, shake: 1, sfx: 'card',
+    parts: [['veil', { d: 1250 }], ['die', { pips: [4, 3], d: 1000, gap: 130 }],
+      ['coin', { n: 10, dl: 300, d: 900, gap: 60 }], ['pulse', { dl: 760 }]]
+  },
+  /* ---- 天書の深淵：底の見えないところへ落ちる ---- */
+  abyss: {
+    name: '深淵', kana: 'ABYSS', ck: 'rgba(104,132,186,.5)', ck2: 'rgba(222,236,255,.9)', bg: 'rgba(2,6,14,.9)',
+    ms: 1400, sfx: 'vanish',
+    parts: [['veil', { d: 1400 }], ['tide', { d: 1300 }], ['page', { n: 4, gap: 150, d: 900 }],
+      ['iris', { dl: 420, d: 950 }], ['mote', { n: 14, dir: 'down', d: 1200 }]]
+  },
+  /* ---- アーティファクトω：完全な機構 ---- */
+  omega: {
+    name: '完全', kana: 'OMEGA', ck: 'rgba(170,206,214,.52)', ck2: 'rgba(238,252,255,.95)', bg: 'rgba(6,10,12,.86)',
+    ms: 1400, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1400 }], ['gear', { n: 3, d: 1300, sz: 120, spin: 520 }],
+      ['glyph', { t: 'Ω', n: 1, r: 0, sz: 110, d: 1100, dl: 300, oy: 54 }],
+      ['ring', { n: 3, hex: true, gap: 150, bw: 2, d: 1050 }], ['beam', { n: 2, dl: 620, d: 760 }]]
+  },
+  /* ---- 全力の星：出せる力をすべて ---- */
+  allstar: {
+    name: '全力', kana: 'ALL-OUT', ck: 'rgba(240,214,120,.58)', ck2: 'rgba(255,252,232,.98)', bg: 'rgba(10,8,4,.8)',
+    ms: 1050, shake: 2, sfx: 'super',
+    parts: [['veil', { d: 1050 }], ['pulse', { n: 2, gap: 200, d: 560 }], ['ray', { n: 16, d: 900, len: 56, gap: 20 }],
+      ['star', { n: 5, gap: 70, d: 820 }], ['mote', { n: 18, dir: 'out', d: 1000 }]]
+  },
+  /* ---- 億り人：札束が天井まで ---- */
+  fortune: {
+    name: '億', kana: 'FORTUNE', ck: 'rgba(240,204,96,.58)', ck2: 'rgba(255,250,214,.98)', bg: 'rgba(14,10,2,.8)',
+    ms: 1450, shake: 1, sfx: 'chime',
+    parts: [['veil', { d: 1450 }], ['coin', { n: 34, d: 1150, gap: 32 }],
+      ['digit', { seq: ['1', '12', '340', '7,800', '65万', '1億'], d: 1300, sz: 64, oy: 36 }],
+      ['ray', { n: 10, dl: 620, d: 760, len: 44 }], ['star', { dl: 900 }]]
+  },
+  /* ---- 紅の疾風・スカーレット：赤い刃が走る ---- */
+  crimson: {
+    name: '紅刃', kana: 'CRIMSON', ck: 'rgba(214,60,66,.56)', ck2: 'rgba(255,230,230,.96)', bg: 'rgba(12,2,4,.86)',
+    ms: 1200, shake: 2, sfx: 'shot',
+    parts: [['veil', { d: 1200 }], ['slash', { n: 5, angles: [-28, -12, 4, 20, 38], gap: 130, bw: 5, d: 560 }],
+      ['rain', { n: 18, a: 108, d: 760, gap: 30, len: 130 }], ['pulse', { dl: 680 }]]
+  },
+  /* ---- 不落の城壁・セザール：石壁が立つ ---- */
+  rampart: {
+    name: '城壁', kana: 'RAMPART', ck: 'rgba(170,158,140,.52)', ck2: 'rgba(246,240,230,.92)', bg: 'rgba(10,10,8,.84)',
+    ms: 1250, shake: 2, sfx: 'rumble',
+    parts: [['veil', { d: 1250 }], ['wall', { n: 7, gap: 70, d: 900, h: 52, hmin: 26 }],
+      ['tile', { n: 5, dl: 300, d: 760, gap: 70, sz: 44 }], ['smoke', { n: 5, dl: 260, d: 900, ymin: 68 }]]
+  },
+  /* ---- 妖精の歌姫・アリア：妖精が輪を描く ---- */
+  fairyring: {
+    name: '妖精環', kana: 'FAIRY', ck: 'rgba(142,218,176,.5)', ck2: 'rgba(238,255,244,.95)', bg: 'rgba(6,14,10,.78)',
+    ms: 1350, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['orb', { n: 7, d: 1300, r: 20 }],
+      ['ring', { n: 2, gap: 220, bw: 1, to: 3, d: 1000 }], ['mote', { n: 18, dir: 'up', d: 1250 }], ['star', { dl: 760 }]]
+  },
+  /* ---- 嵐槍の主・オーディン：槍が降る ---- */
+  gungnir: {
+    name: '投槍', kana: 'GUNGNIR', ck: 'rgba(170,192,230,.54)', ck2: 'rgba(244,250,255,.98)', bg: 'rgba(6,8,14,.86)',
+    ms: 1100, shake: 3, sfx: 'rumble',
+    parts: [['veil', { d: 1100 }], ['bolt', { n: 3, gap: 110, d: 520 }],
+      ['lance', { n: 3, dl: 280, gap: 90, d: 620, h: 62 }], ['pulse', { dl: 640 }], ['shard', { n: 10, dl: 700, d: 620, len: 24 }]]
+  },
+  /* ---- 闇の帝王・ダークエンペラー：玉座が現れる ---- */
+  throne: {
+    name: '玉座', kana: 'THRONE', ck: 'rgba(146,96,176,.52)', ck2: 'rgba(234,218,255,.94)', bg: 'rgba(4,2,10,.9)',
+    ms: 1450, shake: 2, sfx: 'summon',
+    parts: [['curtain', { d: 1400 }], ['wall', { n: 3, gap: 110, dl: 260, d: 900, h: 46, hmin: 30, w: 92 }],
+      ['glyph', { t: '闇帝王', n: 3, r: -118, sz: 24, d: 1100, dl: 420, oy: 56 }],
+      ['ring', { n: 2, gap: 200, dl: 500, d: 950 }], ['mote', { n: 14, dir: 'up', d: 1300 }]]
+  },
+  /* ---- 守護の聖盾・アイテール：盾の壁 ---- */
+  aegis: {
+    name: '盾壁', kana: 'AEGIS', ck: 'rgba(196,214,236,.54)', ck2: 'rgba(250,253,255,.96)', bg: 'rgba(8,10,14,.82)',
+    ms: 1250, sfx: 'chime',
+    parts: [['veil', { d: 1250 }], ['ring', { n: 3, hex: true, gap: 150, bw: 4, sz: 190, to: 2.4, d: 1150 }],
+      ['ring', { n: 2, hex: true, rev: true, gap: 180, bw: 2, sz: 150, to: 3.4, d: 1050 }],
+      ['orb', { n: 6, d: 1150, r: 15, sz: 10 }], ['star', { dl: 680 }], ['pulse', { dl: 820 }]]
+  },
+  /* ---- オリヴィエ（2枚ともこの演出）：双翼が開く ---- */
+  wings: {
+    name: '双翼', kana: 'WINGS', ck: 'rgba(224,206,160,.54)', ck2: 'rgba(255,250,236,.96)', bg: 'rgba(10,8,12,.8)',
+    ms: 1300, sfx: 'summon',
+    parts: [['veil', { d: 1300 }], ['wing', { d: 1000, oy: 40 }], ['beam', { dl: 240, d: 900, w: 140 }],
+      ['feather', { n: 14, dl: 300, d: 1200 }], ['ring', { n: 2, gap: 180, dl: 420, d: 900 }]]
+  },
+  /* ---- 香風の踊り子・ウィムエル：香りが風に乗る ---- */
+  fragrance: {
+    name: '香風', kana: 'FRAGRANCE', ck: 'rgba(224,170,208,.48)', ck2: 'rgba(255,244,252,.94)', bg: 'rgba(12,8,14,.74)',
+    ms: 1350, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['swirl', { d: 1300, spin: 340, sz: 50 }],
+      ['petal', { n: 16, dir: 'up', d: 1250, sz: 12 }], ['mote', { n: 16, dir: 'out', d: 1200 }]]
+  },
+  /* ---- 玩具職人・カミシラ：玩具箱がひっくり返る ---- */
+  toybox: {
+    name: '玩具箱', kana: 'TOYBOX', ck: 'rgba(238,166,104,.52)', ck2: 'rgba(255,246,228,.96)', bg: 'rgba(14,8,6,.78)',
+    ms: 1200, shake: 1, sfx: 'card',
+    parts: [['veil', { d: 1200 }], ['tile', { n: 10, d: 820, gap: 56 }],
+      ['coin', { n: 12, dl: 260, d: 880, gap: 50, sz: 20 }], ['star', { n: 3, gap: 110, dl: 420, d: 700 }]]
+  },
+  /* ---- 深海の守り・ネムラフィ：水の底へ ---- */
+  sink: {
+    name: '深海', kana: 'ABYSSAL', ck: 'rgba(98,170,206,.5)', ck2: 'rgba(230,248,255,.92)', bg: 'rgba(2,10,18,.88)',
+    ms: 1450, sfx: 'vanish',
+    parts: [['veil', { d: 1450 }], ['tide', { d: 1400 }], ['bub', { n: 20, d: 1350, gap: 54 }],
+      ['mote', { n: 12, dir: 'down', d: 1250 }], ['ring', { n: 2, gap: 240, rev: true, d: 1000 }]]
+  },
+  /* ---- 鏡界の魔女・オルフェグ：鏡の向こうから ---- */
+  mirrorworld: {
+    name: '鏡界', kana: 'MIRROR', ck: 'rgba(182,206,226,.52)', ck2: 'rgba(252,254,255,.96)', bg: 'rgba(6,8,12,.86)',
+    ms: 1350, shake: 1, sfx: 'vanish',
+    parts: [['veil', { d: 1350 }], ['pane', { d: 1200 }], ['shard', { n: 16, dl: 700, d: 700, len: 32 }],
+      ['iris', { out: true, dl: 740, d: 700 }], ['star', { dl: 760 }]]
+  },
+  /* ---- 茨園の姫・グラシェル：茨が囲う ---- */
+  thorns: {
+    name: '茨園', kana: 'THORNS', ck: 'rgba(146,176,118,.5)', ck2: 'rgba(240,250,226,.92)', bg: 'rgba(8,12,6,.84)',
+    ms: 1350, sfx: 'rumble',
+    parts: [['veil', { d: 1350 }], ['thorn', { n: 9, gap: 70, d: 1000, h: 54 }],
+      ['petal', { n: 12, dl: 420, d: 1100, sz: 12 }], ['ring', { n: 2, gap: 200, dl: 480, d: 900 }]]
+  },
+  /* ---- 夢幻の守り人・ユルゼッタ：まぼろしのなかに ---- */
+  dream: {
+    name: '夢幻', kana: 'DREAM', ck: 'rgba(186,170,228,.46)', ck2: 'rgba(248,244,255,.94)', bg: 'rgba(8,8,18,.76)',
+    ms: 1450, sfx: 'chime',
+    parts: [['veil', { d: 1450 }], ['swirl', { d: 1400, spin: 300, sz: 64 }], ['bub', { n: 14, d: 1300, gap: 70, sz: 34 }],
+      ['glyph', { t: '夢幻', n: 2, r: -112, sz: 26, spin: 60, d: 1100, dl: 360, oy: 58 }], ['mote', { n: 14, dir: 'up', d: 1300 }]]
+  },
+  /* ---- 終夜の女王・ヴェネクシア：夜が明けないまま ---- */
+  nightfall: {
+    name: '終夜', kana: 'NIGHTFALL', ck: 'rgba(110,122,190,.48)', ck2: 'rgba(234,238,255,.94)', bg: 'rgba(2,2,10,.92)',
+    ms: 1400, sfx: 'vanish',
+    parts: [['curtain', { d: 1380 }], ['mote', { n: 24, dir: 'out', d: 1300 }], ['orb', { n: 5, dl: 300, d: 1100, r: 24, sz: 9 }],
+      ['iris', { dl: 480, d: 900 }], ['star', { n: 3, gap: 140, dl: 520, d: 760 }]]
+  },
+  /* ---- 黎明の姫・シェリネ：夜が明ける ---- */
+  dawn: {
+    name: '黎明', kana: 'DAWN', ck: 'rgba(244,190,130,.52)', ck2: 'rgba(255,250,232,.96)', bg: 'rgba(14,10,18,.8)',
+    ms: 1350, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['sun', { d: 1300, sz: 38, by: 4 }], ['ray', { n: 12, dl: 420, d: 820, len: 48, oy: 60 }],
+      ['mote', { n: 16, dir: 'up', d: 1250 }], ['pulse', { dl: 820 }]]
+  },
+  /* ---- 天剣の担い手・イドメタ：剣が降りて立つ ---- */
+  heavensword: {
+    name: '天剣', kana: 'SWORD', ck: 'rgba(214,224,240,.54)', ck2: 'rgba(255,255,255,.98)', bg: 'rgba(8,10,16,.84)',
+    ms: 1150, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1150 }], ['lance', { d: 820, w: 18, h: 60 }], ['pulse', { dl: 560, d: 420 }],
+      ['ring', { n: 3, gap: 110, dl: 580, bw: 2, to: 4, d: 760 }], ['star', { dl: 620, sz: 100 }]]
+  },
+  /* ---- 奏絶の歌姫・リーシェナ：音が波になる ---- */
+  chord: {
+    name: '奏絶', kana: 'CHORD', ck: 'rgba(196,166,232,.5)', ck2: 'rgba(248,242,255,.95)', bg: 'rgba(8,6,14,.8)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['ring', { n: 5, gap: 110, bw: 2, to: 6, d: 1000 }],
+      ['glyph', { t: '♪♫♪♫', n: 6, r: -126, sz: 24, spin: 150, d: 1150 }], ['mote', { n: 14, dir: 'out', d: 1150 }]]
+  },
+  /* ---- 豪風の双剣・リノセウス：風が通る ---- */
+  gale: {
+    name: '豪風', kana: 'GALE', ck: 'rgba(158,214,200,.5)', ck2: 'rgba(240,255,250,.94)', bg: 'rgba(6,12,12,.8)',
+    ms: 1250, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1250 }], ['rain', { n: 34, a: 86, d: 860, gap: 22, h: 130, len: 150 }],
+      ['swirl', { d: 1200, spin: 560, sz: 46 }], ['slash', { n: 4, angles: [-8, 4, -3, 7], gap: 140, bw: 3, dl: 200, d: 560 }]]
+  },
+  /* ---- 双極の硝子・フラムグラス：炎と水が並ぶ ---- */
+  duality: {
+    name: '双極', kana: 'DUALITY', ck: 'rgba(206,146,120,.52)', ck2: 'rgba(252,242,238,.95)', bg: 'rgba(8,8,12,.84)',
+    ms: 1300, shake: 1, sfx: 'summon',
+    parts: [['split', { d: 1280 }],
+      ['tide', { half: 'r', d: 1150, ck: 'rgba(84,158,204,.5)' }],
+      ['bub', { n: 10, d: 1120, gap: 80, sz: 24, ck2: 'rgba(224,246,255,.9)' }],
+      ['flame', { n: 2, x: '24%', d: 1050, h: 52, w: 140, gap: 140, ck: 'rgba(234,118,56,.58)', ck2: 'rgba(255,226,170,.95)' }],
+      ['mote', { n: 10, dir: 'up', d: 1050, ck2: 'rgba(255,214,160,.95)' }],
+      ['ring', { n: 2, gap: 190, bw: 3, d: 1000 }]]
+  }
+};
+/* 札 → 演出の割り当て。カードの定義を触らずここだけで管理する。 */
+const ENTRY_FX_OF = {
+  satan_001: 'doom',
+  servant_001: 'void', oni_001: 'void', general_001: 'void', declare_001: 'void', kalgiden_001: 'void',
+  albion_001: 'rift', beltezor_001: 'duststorm', iranza_001: 'descent',
+  kingcup_001: 'unseal', explosion_001: 'blast', azraflete_001: 'pyre',
+  ezdia_001: 'eclipse', belial_001: 'fallen', ortenia_001: 'bloom',
+  leiantose_001: 'codex', shakudo_001: 'scatter', zerael_001: 'wheel',
+  synthesize_001: 'goldpile', ginger_001: 'curse', raio_001: 'zerocount',
+  sephie_001: 'sigil', sagatsumatsu_001: 'behead', kukishiro_001: 'dicebet',
+  archdeep_001: 'abyss', artifactomega_001: 'omega', fullstar_001: 'allstar',
+  okuribito_001: 'fortune', scarlet_001: 'crimson', cesar_001: 'rampart',
+  aria_001: 'fairyring', odin_001: 'gungnir', darkemperor_001: 'throne',
+  aether_001: 'aegis', olivier_001: 'wings', reolivier_001: 'wings',
+  wimuel_001: 'fragrance', kamishira_001: 'toybox', nemurafi_001: 'sink',
+  olfeg_001: 'mirrorworld', graciel_001: 'thorns', yuruzetta_001: 'dream',
+  venexia_001: 'nightfall', shirine_001: 'dawn', idometa_001: 'heavensword',
+  rishena_001: 'chord', rhinoceus_001: 'gale', flamglass_001: 'duality'
+};
+const entryFxOf = cardId => ENTRY_FX[ENTRY_FX_OF[cardId]] ? ENTRY_FX_OF[cardId] : null;
+
 const FX = {
 
   layer: null,
@@ -13018,7 +14106,7 @@ const FX = {
   healAt(sel, n) { const d = this.at(sel, 'fx-num heal'); if (d) d.textContent = '+' + n; },
   zeroAt(sel, t) { const d = this.at(sel, 'fx-num zero'); if (d) d.textContent = t; },
   dust(node) { this.at(node, 'fx-smoke'); },
-  shake() { if (G && G.sim) return; const b = $('#bt'); if (!b) return; b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 300); },
+  shake(sel) { if (G && G.sim) return; const b = $(sel || '#bt'); if (!b) return; b.classList.add('shake'); setTimeout(() => b.classList.remove('shake'), 300); },
   async charge(aNode, tNode) {
     if (G && G.sim) return;
     const a = this.rect(aNode), t = this.rect(tNode);
@@ -13106,6 +14194,80 @@ const FX = {
     }
     wrap.remove();
     return true;
+  },
+  /* 登場演出：札ごとの専用演出を流す。終わってから場に出る（スペルは効果の前）。
+     演出を持たない札や、動きを抑える設定のときは false を返して普通の進行に任せる。 */
+  _lastEntry: {},
+  async entry(cardId, destSel) {
+    if (!G || G.sim || !this.layer) return false;
+    const key = entryFxOf(cardId); if (!key) return false;
+    if (ReduceMotion) return false;
+    /* 同じ札を続けて出すとき（トークンを何体も出すなど）は、2体目以降を省く */
+    const now = Date.now();
+    if (this._lastEntry[cardId] && now - this._lastEntry[cardId] < 1800) { this._lastEntry[cardId] = now; return 'skip'; }
+    this._lastEntry[cardId] = now;
+    await this.playEntry(key, cardId, destSel);
+    return true;
+  },
+  /* 演出そのもの。演出一覧ページからも同じものを呼ぶ（dest を省けば中央で消える）。 */
+  async playEntry(key, cardId, destSel, shakeSel) {
+    const S = ENTRY_FX[key]; if (!S || !this.layer) return;
+    const st = el('div', 'efx');
+    st.style.setProperty('--ck', S.ck); st.style.setProperty('--ck2', S.ck2); st.style.setProperty('--bg', S.bg);
+    this.layer.appendChild(st);
+    /* 下地（演出そのものを読みやすくする） */
+    efxAdd(st, 'e-scrim', { d: (S.ms || 1200) + 'ms' });
+    /* 名札 */
+    const nm = el('div', 'e-name', '<i>' + esc(S.name) + '</i><s>' + esc(S.kana) + '</s>');
+    nm.style.setProperty('--d', (S.ms || 1200) + 'ms');
+    st.appendChild(nm);
+    /* 部品を順に置く */
+    for (const [pk, o] of (S.parts || [])) {
+      const f = EFX_PARTS[pk]; if (!f) continue;
+      let host = st;
+      if (o && (o.ck || o.ck2)) {                        // その部品だけ色を変える
+        host = el('div', 'efx-sub');
+        if (o.ck) host.style.setProperty('--ck', o.ck);
+        if (o.ck2) host.style.setProperty('--ck2', o.ck2);
+        st.appendChild(host);
+      }
+      try { f(host, o || {}); } catch (e) { /* 一部品の失敗で演出を止めない */ }
+    }
+    Sfx.play(S.sfx || 'summon');
+    for (let i = 0; i < (S.shake || 0); i++) setTimeout(() => this.shake(shakeSel), 140 + i * 190);
+    /* 演出の終わりぎわにカードを見せ、行き先へ送る */
+    const hold = S.ms || 1200, show = Math.max(260, hold - 520);
+    await sleep(show);
+    const def = CARD_BY_ID[cardId];
+    let card = null;
+    if (def) {
+      card = el('div', 'e-card' + (S.big ? ' big' : ''));
+      try { card.appendChild(UI.cardFace(def, {})); } catch (e) { card = null; }
+      if (card) {
+        st.appendChild(card);
+        card.animate([
+          { opacity: 0, transform: 'translate(-50%,-50%) scale(.5)' },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1.1)', offset: .45 },
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' }
+        ], { duration: 300, easing: 'cubic-bezier(.2,1.5,.4,1)', fill: 'both' });
+      }
+    }
+    await sleep(Math.max(0, hold - show));
+    if (card) {
+      const r = card.getBoundingClientRect(), d = destSel ? this.rect(destSel) : null;
+      if (d && r.width) {
+        const dx = (d.left + d.width / 2) - (r.left + r.width / 2);
+        const dy = (d.top + d.height / 2) - (r.top + r.height / 2);
+        card.animate([
+          { opacity: 1, transform: 'translate(-50%,-50%) scale(1)' },
+          { opacity: 0, transform: 'translate(calc(-50% + ' + dx + 'px), calc(-50% + ' + dy + 'px)) scale(.22)' }
+        ], { duration: 300, easing: 'cubic-bezier(.5,0,.75,.2)', fill: 'forwards' });
+      } else {
+        card.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 240, fill: 'forwards' });
+      }
+      await sleep(280);
+    }
+    st.remove();
   },
   /* 場に降りたカードの着地モーション */
   land(node, big) {
@@ -13264,7 +14426,37 @@ function mechanicsOf(cardId) {
   return out;
 }
 
-const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'record', 'updates', 'cards', 'rule', 'battle'];
+/* 演出一覧ページの再生。見本なので盤面は動かさず、演出だけを流す。 */
+let EfxBusy = false, EfxAllRunning = false;
+function entryFxCards(key) { return Object.keys(ENTRY_FX_OF).filter(id => ENTRY_FX_OF[id] === key); }
+function stopEfxAll() { EfxAllRunning = false; const s = $('#efxStop'); if (s) s.hidden = true; }
+async function playEfxSample(key) {
+  if (EfxBusy || !ENTRY_FX[key]) return;
+  EfxBusy = true;
+  const node = document.querySelector('[data-efx="' + key + '"]');
+  if (node) node.classList.add('on');
+  const ids = entryFxCards(key);
+  try { await FX.playEntry(key, ids[0], null, '#sc-entryfx .scroll'); }
+  catch (e) { /* 見本の再生が失敗しても一覧は壊さない */ }
+  if (node) node.classList.remove('on');
+  EfxBusy = false;
+}
+async function playEfxAll() {
+  if (EfxAllRunning) return;
+  EfxAllRunning = true;
+  const s = $('#efxStop'); if (s) s.hidden = false;
+  for (const k of Object.keys(ENTRY_FX)) {
+    if (!EfxAllRunning) break;
+    const node = document.querySelector('[data-efx="' + k + '"]');
+    if (node && node.scrollIntoView) node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    await playEfxSample(k);
+    if (!EfxAllRunning) break;
+    await sleep(160);
+  }
+  stopEfxAll();
+}
+
+const SCREENS = ['home', 'setup', 'twopick', 'pickrun', 'deck', 'community', 'format', 'matchup', 'record', 'updates', 'entryfx', 'cards', 'rule', 'battle'];
 let Settings = { timer: store.get('timer', 90), first: store.get('first', 'random') };
 
 /* ============================ デッキ管理 ============================
@@ -13936,6 +15128,7 @@ function fullRuleText() {
      + AI_MATCHUP.games + '戦・計' + AI_MATCHUP.total.toLocaleString() + '試合）を、同じ形の相性表で見られる。');
   li('CARDS（カード一覧）… 全カードを絞り込んで見比べ、1枚ずつ詳細（効果の全文・関連カード・用語の解説）を開ける。');
   li('UPDATES（調整履歴）… カードとルールを直した記録。新しいものが上に並び、カード名を押すとそのカードの説明が開く。');
+  li('ENTRY FX（登場演出）… 場に出る前に専用の演出が流れるカード' + Object.keys(ENTRY_FX_OF).length + '枚ぶん、' + Object.keys(ENTRY_FX).length + '種類の演出を並べた一覧。札を押すとその演出だけを見られる。');
   li('RULE（ルールブック）… この文章の元になっている項目別のルール。一番下にこの全文がある。');
 
   head('3. 勝敗の条件');
@@ -14527,6 +15720,8 @@ const UI = {
     if (name === 'matchup') this.renderMatchup();
     if (name === 'record') this.renderRecord();
     if (name === 'updates') this.renderUpdates();
+    if (name !== 'entryfx') stopEfxAll();                   // 一覧を離れたら続けて再生を止める
+    if (name === 'entryfx') this.renderEntryFx();
     if (name === 'cards') this.renderCards();
     if (name === 'rule') this.renderRule();
     Bgm.forScreen(name);                                   // その場に合った曲に替える
@@ -15166,6 +16361,28 @@ const UI = {
         sec.appendChild(list);
       });
       box.appendChild(sec);
+    });
+  },
+
+
+  /* ---- 登場演出の一覧 ---- */
+  renderEntryFx() {
+    const box = $('#efxList'); if (!box) return;
+    box.innerHTML = '';
+    const keys = Object.keys(ENTRY_FX);
+    const tag = $('#efxTag'); if (tag) tag.textContent = keys.length + ' FX';
+    keys.forEach(k => {
+      const S = ENTRY_FX[k];
+      const ids = entryFxCards(k);
+      const b = el('button', 'efxitem'); b.type = 'button'; b.dataset.efx = k;
+      b.style.setProperty('--ck', S.ck); b.style.setProperty('--ck2', S.ck2); b.style.setProperty('--bg', S.bg);
+      b.innerHTML = '<span class="efxswatch"></span>'
+        + '<span class="efxname">' + esc(S.name) + '</span>'
+        + '<span class="efxkana">' + esc(S.kana) + '</span>'
+        + '<span class="efxcards">' + ids.map(id => esc((CARD_BY_ID[id] || {}).name || id)).join('<i>／</i>') + '</span>'
+        + '<span class="efxmeta tnum">' + (S.ms || 1200) + 'ms'
+        + (S.shake ? '・揺れ' + S.shake : '') + '・' + (S.parts || []).length + '層</span>';
+      box.appendChild(b);
     });
   },
 
@@ -16668,6 +17885,13 @@ function initEvents() {
     const b = e.target.closest('[data-fmt-ver]'); if (!b) return;
     FormatVerFilter = b.dataset.fmtVer; Sfx.play('click'); UI.renderFormat();
   });
+  /* ---- 登場演出の一覧 ---- */
+  $('#efxList').addEventListener('click', e => {
+    const b = e.target.closest('[data-efx]'); if (!b) return;
+    stopEfxAll(); playEfxSample(b.dataset.efx);
+  });
+  $('#efxAll').addEventListener('click', () => { Sfx.play('click'); playEfxAll(); });
+  $('#efxStop').addEventListener('click', () => { Sfx.play('click'); stopEfxAll(); });
   /* ---- 戦績 ---- */
   $('#updateList').addEventListener('click', e => {
     const b = e.target.closest('[data-upd-card]'); if (!b) return;
