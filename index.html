@@ -13347,6 +13347,11 @@ const UPDATES = [
               + '演出が先に終わっても読み終わるまで止めない。効果音を切っているときは読まない。'
               + '読み上げを持たない端末では、これまで通り文字だけが出る。',
             why: '「言う」＝声に出すという意味だったため。' },
+          { kind: 'new', name: '登場演出が全レジェンドに揃う',
+            text: '残っていたレジェンド27枚にも専用の演出を付けた。名品・追走・賞金首・愚者・銀翼・錬成・万食・三道・'
+              + '真線・純白・蛇殿・慕情・破壊・天眼・祭壇・破式・伸長・冥河・神紋・天斧・水理・戦車・安息・小花・'
+              + '絶叫・愛絶・明越。これでトークンを除くレジェンド119枚すべてに演出が付き、合計117種・133枚になった。',
+            why: 'レジェンドだけ演出の有無が混ざっているのを解消するため。' },
           { kind: 'new', name: '登場演出をさらに21種追加',
             text: 'エニグマ・フォーメーション・アクセルのレジェンドを中心に、双翼の翼・アズヴォルト・ギルネリーぜ・'
               + 'アンドロメダ・ゲテンオウ・ミロク・神の召喚・ギルダリア・ティア・マガチヨ・クルル・ルオー・'
@@ -14315,6 +14320,227 @@ const ENTRY_FX = {
     parts: [['veil', { d: 1250 }], ['rain', { n: 34, a: 86, d: 860, gap: 22, h: 130, len: 150 }],
       ['swirl', { d: 1200, spin: 560, sz: 46 }], ['slash', { n: 4, angles: [-8, 4, -3, 7], gap: 140, bw: 3, dl: 200, d: 560 }]]
   },
+  /* ---- ラブリーマスターピース：美しいものは壊れる時にも仕事をする ---- */
+  masterpiece: {
+    name: '名品', kana: 'MASTERPIECE', ck: 'rgba(234,194,140,.8)', ck2: 'rgba(255,246,228,.96)', bg: 'rgba(12,8,6,.86)',
+    ms: 1300, shake: 2, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['pane', { d: 1150 }],
+      ['coin', { n: 10, dl: 200, d: 920, gap: 60, sz: 18 }],
+      ['shard', { n: 16, dl: 680, d: 740, len: 32 }], ['star', { dl: 700, sz: 88 }]]
+  },
+  /* ---- 奮励の追走・ミュー：追い越すためではなく追い続けるために ---- */
+  pursuit: {
+    name: '追走', kana: 'PURSUIT', ck: 'rgba(146,208,228,.8)', ck2: 'rgba(238,252,255,.95)', bg: 'rgba(4,9,13,.86)',
+    ms: 1150, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1150 }], ['rain', { n: 26, a: 92, d: 720, gap: 24, h: 120, len: 150 }],
+      ['orb', { n: 5, d: 1100, r: 19, sz: 11 }], ['gear', { n: 2, dl: 200, d: 1050, sz: 68 }],
+      ['mote', { n: 14, dir: 'out', d: 1050 }]]
+  },
+  /* ---- 特記標的・ヘイレムハニィ：名簿に自分の名を書き足す ---- */
+  wanted: {
+    name: '賞金首', kana: 'WANTED', ck: 'rgba(214,178,118,.8)', ck2: 'rgba(252,242,216,.95)', bg: 'rgba(12,9,5,.88)',
+    ms: 1250, shake: 2, sfx: 'shot',
+    parts: [['veil', { d: 1250 }], ['plate', { n: 10, d: 950, gap: 62, w: 62 }],
+      ['hole', { n: 6, dl: 320, d: 800, gap: 85 }],
+      ['digit', { seq: ['$', '$$', '$$$'], d: 1100, sz: 60, oy: 30 }], ['smoke', { n: 4, dl: 420, d: 1000 }]]
+  },
+  /* ---- <愚者>リンクル：道を知らないからどの道でも選べる ---- */
+  thefool: {
+    name: '愚者', kana: 'THE FOOL', ck: 'rgba(206,186,232,.78)', ck2: 'rgba(250,244,255,.95)', bg: 'rgba(8,7,13,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['thread', { n: 12, d: 1200, gap: 32, len: 40 }],
+      ['tile', { n: 8, dl: 240, d: 820, gap: 70, sz: 46 }],
+      ['glyph', { t: '愚', n: 1, r: 0, sz: 82, d: 1100, dl: 420, oy: 58 }], ['mote', { n: 14, dir: 'out', d: 1100 }]]
+  },
+  /* ---- 龍の片翼・アルジャンテ：片翼だけでも風向きは変えられる ---- */
+  silverwing: {
+    name: '銀翼', kana: 'SILVER WING', ck: 'rgba(196,214,232,.8)', ck2: 'rgba(250,253,255,.97)', bg: 'rgba(7,9,13,.86)',
+    ms: 1250, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1250 }], ['wing', { side: 'r', d: 1050, oy: 44 }],
+      ['rain', { n: 18, a: 74, d: 760, gap: 30, len: 140 }],
+      ['ray', { n: 7, dl: 340, d: 860, len: 44, from: 200 }], ['feather', { n: 10, dl: 380, d: 1150 }]]
+  },
+  /* ---- アダマントアルケミスト・ノーマン：結晶を惜しまない者が形を選ぶ ---- */
+  alchemy: {
+    name: '錬成', kana: 'ALCHEMY', ck: 'rgba(170,222,196,.78)', ck2: 'rgba(240,255,248,.95)', bg: 'rgba(5,11,9,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['ring', { n: 3, hex: true, gap: 140, bw: 3, sz: 140, to: 2.6, d: 1100 }],
+      ['gear', { n: 3, dl: 180, d: 1150, sz: 72 }],
+      ['shard', { n: 12, dl: 420, d: 820, len: 22, sz: 18 }], ['star', { dl: 700 }]]
+  },
+  /* ---- 万食のアナテマ・ララアンセム：喰らうものが尽きるまで歌は終わらない ---- */
+  endlessfeast: {
+    name: '万食', kana: 'ENDLESS FEAST', ck: 'rgba(208,118,142,.8)', ck2: 'rgba(255,234,240,.95)', bg: 'rgba(10,4,7,.88)',
+    ms: 1300, shake: 1, sfx: 'vanish',
+    parts: [['veil', { d: 1300 }], ['beat', { d: 1250, sz: 104 }],
+      ['mote', { n: 26, dir: 'in', d: 1200 }], ['ring', { n: 4, rev: true, gap: 120, d: 1050 }],
+      ['glyph', { t: '万食', n: 2, r: -104, sz: 25, d: 1100, dl: 400, oy: 62 }]]
+  },
+  /* ---- 羅刹の咎人・ガロダート：選べる道が三つに増えた ---- */
+  threepaths: {
+    name: '三道', kana: 'THREE PATHS', ck: 'rgba(222,134,96,.8)', ck2: 'rgba(255,238,220,.95)', bg: 'rgba(12,6,4,.88)',
+    ms: 1250, shake: 2, sfx: 'summon',
+    parts: [['veil', { d: 1250 }], ['beam', { n: 3, gap: 120, d: 1050, w: 78 }],
+      ['wall', { n: 3, dl: 240, gap: 110, d: 950, h: 44, hmin: 36, w: 54 }],
+      ['glyph', { t: '三', n: 1, r: 0, sz: 86, d: 1050, dl: 440, oy: 58 }], ['shard', { n: 10, dl: 560, d: 740, len: 24 }]]
+  },
+  /* ---- 真実の関係・ヴェハリヤー：引いた線がそのまま真実になる ---- */
+  trueline: {
+    name: '真線', kana: 'TRUE LINE', ck: 'rgba(164,198,232,.78)', ck2: 'rgba(244,250,255,.95)', bg: 'rgba(5,8,13,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['tile', { n: 9, d: 840, gap: 64, sz: 44 }],
+      ['thread', { n: 10, dl: 300, d: 1050, gap: 42, len: 34 }],
+      ['glyph', { t: '真', n: 1, r: 0, sz: 78, d: 1050, dl: 480, oy: 58 }], ['ring', { n: 2, gap: 190, bw: 2, d: 980 }]]
+  },
+  /* ---- 純白の聖女・ジャンヌ：汚れる前に終わらせる ---- */
+  purewhite: {
+    name: '純白', kana: 'PURE WHITE', ck: 'rgba(238,244,252,.86)', ck2: 'rgba(255,255,255,.99)', bg: 'rgba(10,11,14,.84)',
+    ms: 1250, shake: 2, sfx: 'super',
+    parts: [['veil', { d: 1250 }], ['ray', { n: 14, d: 950, len: 52, gap: 22 }],
+      ['wall', { n: 5, dl: 220, gap: 62, d: 900, h: 36, hmin: 26, w: 44 }],
+      ['feather', { n: 16, dl: 260, d: 1200 }], ['pulse', { n: 2, gap: 220, dl: 520 }]]
+  },
+  /* ---- 蛇殿の執行者・ゲノムエル：残り体力が刑を決める ---- */
+  serpenthall: {
+    name: '蛇殿', kana: 'SERPENT HALL', ck: 'rgba(148,194,136,.78)', ck2: 'rgba(238,252,230,.94)', bg: 'rgba(5,10,5,.88)',
+    ms: 1350, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1350 }], ['swirl', { d: 1300, spin: 540, sz: 56 }],
+      ['wall', { n: 4, gap: 86, d: 1000, h: 58, hmin: 48, w: 30 }],
+      ['dial', { d: 1200, a: 196 }], ['mote', { n: 16, dir: 'up', d: 1200 }]]
+  },
+  /* ---- 魔恋の慕情・シイム：恋しさのぶんだけ手が増える ---- */
+  longing: {
+    name: '慕情', kana: 'LONGING', ck: 'rgba(230,150,186,.78)', ck2: 'rgba(255,242,250,.96)', bg: 'rgba(11,5,10,.86)',
+    ms: 1300, sfx: 'chime',
+    parts: [['veil', { d: 1300 }], ['shard', { n: 14, d: 1000, len: 24, sz: 26, oy: 70 }],
+      ['beat', { d: 1250, sz: 88 }], ['petal', { n: 18, dir: 'up', dl: 300, d: 1200, sz: 13 }],
+      ['ring', { n: 2, gap: 200, bw: 2, d: 980 }]]
+  },
+  /* ---- 破壊の関係・アクシア：自分の場ごと砕け散る ---- */
+  collapse: {
+    name: '破壊', kana: 'COLLAPSE', ck: 'rgba(204,196,226,.86)', ck2: 'rgba(248,246,255,.97)', bg: 'rgba(6,6,10,.9)',
+    ms: 1250, shake: 3, sfx: 'rumble',
+    parts: [['veil', { d: 1250 }], ['wall', { n: 6, gap: 46, d: 1050, h: 58, hmin: 42, w: 46 }],
+      ['shard', { n: 24, dl: 240, d: 950, len: 40 }], ['split', { dl: 360, d: 880 }],
+      ['pulse', { dl: 400 }], ['smoke', { n: 4, dl: 520, d: 950, ymin: 62 }]]
+  },
+  /* ---- 古き天眼・ビバティー：瞬きの代わりに墓場の数を数える ---- */
+  ancienteye: {
+    name: '天眼', kana: 'ANCIENT EYE', ck: 'rgba(170,150,206,.78)', ck2: 'rgba(242,236,255,.94)', bg: 'rgba(6,5,11,.9)',
+    ms: 1350, sfx: 'vanish',
+    parts: [['veil', { d: 1350 }], ['eye', { d: 1300 }], ['grid', { d: 1250, cell: 58 }],
+      ['digit', { seq: ['1', '2', '3', '4'], d: 1150, sz: 52, oy: 28 }],
+      ['mote', { n: 16, dir: 'in', d: 1200 }]]
+  },
+  /* ---- 崇高の憎悪・カンディマ：割れた祭壇が二つ立ち上がる ---- */
+  altar: {
+    name: '祭壇', kana: 'ALTAR', ck: 'rgba(192,146,176,.78)', ck2: 'rgba(250,238,248,.95)', bg: 'rgba(9,5,9,.88)',
+    ms: 1350, shake: 3, sfx: 'rumble',
+    parts: [['veil', { d: 1350 }], ['wall', { n: 2, gap: 170, d: 1000, h: 52, hmin: 46, w: 76 }],
+      ['slash', { n: 2, angles: [-82, -98], gap: 160, bw: 4, dl: 360, d: 520 }],
+      ['shard', { n: 14, dl: 520, d: 800, len: 30 }],
+      ['glyph', { t: '憎', n: 1, r: 0, sz: 74, d: 1100, dl: 440, oy: 58 }]]
+  },
+  /* ---- 破式の執行者・シュマエル：まず自分の手札を一枚破く ---- */
+  breakrite: {
+    name: '破式', kana: 'BREAK THE RITE', ck: 'rgba(158,186,222,.78)', ck2: 'rgba(242,248,255,.95)', bg: 'rgba(5,7,12,.88)',
+    ms: 1250, shake: 2, sfx: 'shot',
+    parts: [['veil', { d: 1250 }], ['grid', { d: 1200, cell: 40 }],
+      ['glyph', { t: '破式執行', n: 4, r: -112, sz: 22, spin: -120, d: 1050, oy: 60 }],
+      ['plate', { n: 6, dl: 280, d: 900, gap: 80, w: 54 }],
+      ['slash', { n: 2, angles: [-28, 22], gap: 130, bw: 5, dl: 460, d: 460 }]]
+  },
+  /* ---- 成長する生徒・カステル：教わるより先に伸びてしまう ---- */
+  outgrown: {
+    name: '伸長', kana: 'OUTGROWN', ck: 'rgba(178,220,164,.78)', ck2: 'rgba(244,255,238,.95)', bg: 'rgba(5,11,6,.86)',
+    ms: 1250, shake: 1, sfx: 'summon',
+    parts: [['veil', { d: 1250 }], ['thorn', { n: 9, gap: 62, d: 980, h: 64, w: 6 }],
+      ['ring', { n: 4, gap: 110, bw: 2, to: 5, d: 1000 }],
+      ['digit', { seq: ['2', '4', '6', '8'], d: 1100, sz: 54, oy: 30 }], ['mote', { n: 16, dir: 'up', d: 1150 }]]
+  },
+  /* ---- 流れ墜つ冥河・カローン：渡し賃を払えぬ者は舟を漕ぐ ---- */
+  theferry: {
+    name: '冥河', kana: 'THE FERRY', ck: 'rgba(118,138,166,.78)', ck2: 'rgba(232,240,250,.93)', bg: 'rgba(3,5,9,.9)',
+    ms: 1400, sfx: 'vanish',
+    parts: [['curtain', { d: 1380 }], ['tide', { d: 1300, ck: 'rgba(96,126,168,.84)' }],
+      ['rain', { n: 22, a: 102, d: 900, gap: 30, h: 110, len: 140 }],
+      ['coin', { n: 16, d: 1050, gap: 48, sz: 22 }],
+      ['mote', { n: 22, dir: 'down', d: 1250 }], ['ring', { n: 3, gap: 170, rev: true, bw: 3, d: 1100, oy: 60 }]]
+  },
+  /* ---- 神紋の咎人・エルラーデ：罪の数だけ紋の光が増す ---- */
+  divinemark: {
+    name: '神紋', kana: 'DIVINE MARK', ck: 'rgba(242,214,146,.82)', ck2: 'rgba(255,250,228,.97)', bg: 'rgba(11,9,5,.86)',
+    ms: 1300, shake: 1, sfx: 'chime',
+    parts: [['veil', { d: 1300 }],
+      ['glyph', { t: '神紋咎人', n: 8, r: -126, sz: 21, spin: 140, d: 1200, oy: 56 }],
+      ['ray', { n: 10, dl: 340, d: 900, len: 46 }],
+      ['ring', { n: 3, gap: 130, bw: 3, to: 4, d: 1020 }], ['star', { dl: 720 }]]
+  },
+  /* ---- 古き天斧・ヨグゼンタ：刃こぼれの数だけ持ち主を覚えている ---- */
+  ancientaxe: {
+    name: '天斧', kana: 'ANCIENT AXE', ck: 'rgba(192,176,150,.8)', ck2: 'rgba(250,244,230,.95)', bg: 'rgba(9,8,6,.88)',
+    ms: 1200, shake: 3, sfx: 'shot',
+    parts: [['veil', { d: 1200 }], ['slash', { n: 2, angles: [-52, -40], gap: 140, bw: 11, d: 860 }],
+      ['shard', { n: 16, dl: 320, d: 820, len: 30, sz: 20 }],
+      ['digit', { seq: ['1', '5', '10'], d: 1050, sz: 54, oy: 30 }], ['smoke', { n: 4, dl: 420, d: 980, ymin: 60 }]]
+  },
+  /* ---- 水の理・ワムデュス：溜め込んだ分だけ水面が盛り上がる ---- */
+  lawofwater: {
+    name: '水理', kana: 'LAW OF WATER', ck: 'rgba(104,178,220,.8)', ck2: 'rgba(234,250,255,.95)', bg: 'rgba(3,9,15,.88)',
+    ms: 1350, shake: 1, sfx: 'rumble',
+    parts: [['veil', { d: 1350 }], ['tide', { d: 1300 }],
+      ['ring', { n: 4, gap: 160, bw: 5, to: 2.6, d: 1300, sz: 160, oy: 60 }],
+      ['bub', { n: 20, d: 1250, gap: 52, sz: 28 }], ['mote', { n: 16, dir: 'up', d: 1200 }]]
+  },
+  /* ---- 猛る<戦車>オルオーン：手綱を放した戦車 ---- */
+  thechariot: {
+    name: '戦車', kana: 'THE CHARIOT', ck: 'rgba(224,160,96,.82)', ck2: 'rgba(255,240,214,.96)', bg: 'rgba(12,7,4,.88)',
+    ms: 1250, shake: 3, sfx: 'rumble',
+    parts: [['veil', { d: 1250 }], ['rain', { n: 28, a: 94, d: 700, gap: 20, h: 130, len: 150 }],
+      ['gear', { n: 2, d: 1200, sz: 150, bw: 12, spin: 760 }],
+      ['ring', { n: 2, gap: 220, bw: 8, to: 2.2, d: 1200, sz: 170 }],
+      ['smoke', { n: 5, dl: 300, d: 1100, ymin: 62 }], ['shard', { n: 10, dl: 420, d: 760, len: 26 }]]
+  },
+  /* ---- 安息の関係・ヒメカ：眠りを分け合う相手がいる限り倒れない ---- */
+  repose: {
+    name: '安息', kana: 'REPOSE', ck: 'rgba(168,186,224,.74)', ck2: 'rgba(242,246,255,.94)', bg: 'rgba(6,7,13,.84)',
+    ms: 1350, sfx: 'chime',
+    parts: [['veil', { d: 1350 }], ['beat', { n: 2, gap: 260, d: 1300, sz: 76 }],
+      ['bub', { n: 12, d: 1250, gap: 80, sz: 30 }],
+      ['mote', { n: 18, dir: 'up', d: 1250 }], ['ring', { n: 2, gap: 230, bw: 1, d: 1000 }]]
+  },
+  /* ---- 尽小花・イマリ：小さな花を尽くすたび呪文が落ちてくる ---- */
+  smallbloom: {
+    name: '小花', kana: 'SMALL BLOOM', ck: 'rgba(222,178,206,.76)', ck2: 'rgba(255,246,252,.95)', bg: 'rgba(9,6,10,.84)',
+    ms: 1200, sfx: 'chime',
+    parts: [['veil', { d: 1200 }], ['petal', { n: 28, dir: 'up', d: 1150, gap: 28, sz: 10 }],
+      ['plate', { n: 4, dir: 'down', dl: 320, d: 900, gap: 110, w: 50 }],
+      ['ring', { n: 2, gap: 190, bw: 2, d: 950 }], ['star', { dl: 620, sz: 76 }]]
+  },
+  /* ---- 絶叫の顕現・ルルナイ：叫んだ数だけ喉が増える ---- */
+  scream: {
+    name: '絶叫', kana: 'SCREAM', ck: 'rgba(226,96,112,.82)', ck2: 'rgba(255,232,236,.96)', bg: 'rgba(11,3,5,.9)',
+    ms: 1250, shake: 3, sfx: 'shot',
+    parts: [['veil', { d: 1250 }], ['ring', { n: 7, gap: 80, bw: 4, to: 7, d: 1000 }],
+      ['plate', { n: 12, dl: 240, d: 950, gap: 48, w: 40 }],
+      ['pulse', { n: 2, gap: 240, dl: 440 }], ['mote', { n: 16, dir: 'out', d: 1150 }]]
+  },
+  /* ---- 愛絶の顕現・ヴァーナレク：愛を絶つたび財布が重くなる ---- */
+  lovesevered: {
+    name: '愛絶', kana: 'LOVE SEVERED', ck: 'rgba(218,106,126,.8)', ck2: 'rgba(255,234,240,.96)', bg: 'rgba(11,4,7,.88)',
+    ms: 1250, shake: 2, sfx: 'shot',
+    parts: [['veil', { d: 1250 }], ['beat', { d: 1000, sz: 96 }],
+      ['slash', { n: 1, a: -36, bw: 7, dl: 420, d: 420 }],
+      ['coin', { n: 14, dl: 520, d: 900, gap: 44, sz: 20 }], ['shard', { n: 10, dl: 460, d: 740, len: 24 }]]
+  },
+  /* ---- 明越花・アラ：夜を越えて咲く花 ---- */
+  dawncross: {
+    name: '明越', kana: 'DAWNCROSS', ck: 'rgba(230,172,150,.78)', ck2: 'rgba(255,246,238,.96)', bg: 'rgba(6,5,12,.88)',
+    ms: 1350, sfx: 'chime',
+    parts: [['curtain', { d: 1330 }], ['sun', { d: 1250, sz: 30, by: 8 }],
+      ['glyph', { t: '明越花', n: 3, r: -108, sz: 23, spin: 100, d: 1150, oy: 60 }],
+      ['petal', { n: 18, dir: 'up', dl: 320, d: 1200, sz: 13 }], ['mote', { n: 16, dir: 'up', d: 1250 }]]
+  },
   /* ---- 双翼の翼：片翼は守りに、片翼は裁きに ---- */
   splitwing: {
     name: '分翼', kana: 'TWO PATHS', ck: 'rgba(206,196,214,.8)', ck2: 'rgba(252,250,255,.96)', bg: 'rgba(8,8,12,.86)',
@@ -14749,7 +14975,15 @@ const ENTRY_FX_OF = {
   icedeer_001: 'antlers', flamedeer_001: 'antlers',
   kururu_001: 'nokill', ruoh_001: 'lawoflight', octrice_001: 'emptied',
   forte_001: 'blackwing', burnedknight_001: 'ashknight', garmille_001: 'scorch',
-  yuelsocie_001: 'duetdance', wilnas_001: 'lawofflame', yube_001: 'wavebloom'
+  yuelsocie_001: 'duetdance', wilnas_001: 'lawofflame', yube_001: 'wavebloom',
+  /* ---- 残りのレジェンド（トークンを除く） ---- */
+  masterpiece_001: 'masterpiece', mu_001: 'pursuit', honey_001: 'wanted', fool_001: 'thefool',
+  argente_001: 'silverwing', norman_001: 'alchemy', lala_001: 'endlessfeast', garodart_001: 'threepaths',
+  veharya_001: 'trueline', jeanne_001: 'purewhite', genomuel_001: 'serpenthall', shiimu_001: 'longing',
+  axia_001: 'collapse', vivaty_001: 'ancienteye', kandima_001: 'altar', shumael_001: 'breakrite',
+  kastel_001: 'outgrown', charon_001: 'theferry', elrade_001: 'divinemark', yogzenta_001: 'ancientaxe',
+  wamdus_001: 'lawofwater', chariot_001: 'thechariot', himeka_001: 'repose', imari_001: 'smallbloom',
+  lulunai_001: 'scream', varnalek_001: 'lovesevered', ara_001: 'dawncross'
 };
 const entryFxOf = cardId => ENTRY_FX[ENTRY_FX_OF[cardId]] ? ENTRY_FX_OF[cardId] : null;
 
