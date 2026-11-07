@@ -32,11 +32,20 @@ const data = await pg.evaluate(() => {
     tooLong: keys.filter(k => (ENTRY_FX[k].ms || 1200) > 1600),
     tooShort: keys.filter(k => (ENTRY_FX[k].ms || 1200) < 800),
     olivierSame: ENTRY_FX_OF.olivier_001 === ENTRY_FX_OF.reolivier_001,
+    /* 「どっちも」の組は同じ演出を使う */
+    pairs: [['dustdays_001', 'redustdays_001'], ['lumiere_001', 'relumiole_001'],
+            ['hanged_001', 'rehanged_001'], ['orchis_001', 'symphonia_001'],
+            ['gilzael_001', 'eyesden_001']].filter(([a, b]) => ENTRY_FX_OF[a] !== ENTRY_FX_OF[b]),
+    /* 新しく足した26種がすべて別の演出になっている */
+    newKeys: ['deephand', 'reversal', 'blades', 'colossus', 'oracle', 'wonder', 'oldlance', 'sandhand',
+              'warcry', 'upstream', 'onewing', 'lasso', 'pierce', 'swordking', 'causality', 'edict',
+              'heavenchain', 'phoenix', 'despair', 'hanged', 'twinshield', 'forbidden', 'extend',
+              'twohearts', 'wailshot', 'gildbloom'].filter(k => !ENTRY_FX[k]),
     resolve: [entryFxOf('satan_001'), entryFxOf('goblin_001')]
   };
 });
-ok('演出が40種類以上ある', data.patterns >= 40, String(data.patterns));
-ok('45枚以上のカードに割り当てられている', data.cards >= 45, String(data.cards));
+ok('演出が69種類以上ある', data.patterns >= 69, String(data.patterns));
+ok('79枚以上のカードに割り当てられている', data.cards >= 79, String(data.cards));
 ok('割り当て先のカードIDが全て実在する', data.badId.length === 0, data.badId.join());
 ok('割り当てた演出名が全て定義されている', data.badKey.length === 0, data.badKey.join());
 ok('使われていない演出がない', data.unused.length === 0, data.unused.join());
@@ -48,6 +57,8 @@ ok('演出の名前が重複していない', data.dupName.length === 0, data.du
 ok('長すぎる演出がない（1.6秒以内）', data.tooLong.length === 0, data.tooLong.join());
 ok('短すぎる演出がない（0.8秒以上）', data.tooShort.length === 0, data.tooShort.join());
 ok('オリヴィエ2枚は同じ演出', data.olivierSame, String(data.olivierSame));
+ok('「どっちも」の5組はそれぞれ同じ演出', data.pairs.length === 0, JSON.stringify(data.pairs));
+ok('追加した26種がすべて定義されている', data.newKeys.length === 0, data.newKeys.join());
 ok('演出を持たない札は null になる',
    data.resolve[0] === 'doom' && data.resolve[1] === null, JSON.stringify(data.resolve));
 
@@ -210,6 +221,54 @@ ok('同じ札を続けて出すと2体目は演出を省く',
    dedupe.first > 700 && dedupe.second < 400, JSON.stringify(dedupe));
 ok('演出を省いたときは普通の召喚演出も流さない',
    dedupe.second < dedupe.first / 3, JSON.stringify(dedupe));
+
+/* ---------- 読み上げ ---------- */
+const voice = await pg.evaluate(async () => {
+  const spoken = [];
+  const real = window.speechSynthesis;
+  /* 端末の声に頼らず、呼ばれ方だけを見る（この入れ物は書き換え不可なので定義し直す） */
+  const put = v => Object.defineProperty(window, 'speechSynthesis', { value: v, configurable: true, writable: true });
+  put({ speak: u => spoken.push(u.text + '|' + u.lang), cancel: () => spoken.push('<cancel>'),
+        getVoices: () => [], addEventListener: () => {} });
+  const out = {};
+  Sfx.on = true; G.sim = false; Voice.picked = true; Voice.ja = null;
+  await FX.playEntry('doom', 'satan_001', null, '#bt');
+  out.afterPlay = spoken.slice();
+  /* 音を切っているときは読まない */
+  spoken.length = 0; Sfx.on = false;
+  await FX.playEntry('doom', 'satan_001', null, '#bt');
+  out.muted = spoken.slice();
+  /* 自動対戦では読まない */
+  spoken.length = 0; Sfx.on = true; G.sim = true;
+  Voice.speak('てすと');
+  out.sim = spoken.slice();
+  G.sim = false;
+  /* 画面を移ると止める */
+  spoken.length = 0; Voice.stop();
+  out.stopped = spoken.slice();
+  put(real);
+  return out;
+});
+ok('演出中にそのカードの文を読み上げる',
+   voice.afterPlay.length === 1 && voice.afterPlay[0].indexOf('最果てには町も法もない') === 0,
+   JSON.stringify(voice.afterPlay));
+ok('読み上げは日本語の声で頼む', /\|ja/.test(voice.afterPlay[0] || ''), String(voice.afterPlay[0]));
+ok('演出が終わっても読み上げを打ち切らない',
+   voice.afterPlay.indexOf('<cancel>') < 0, JSON.stringify(voice.afterPlay));
+ok('音を切っているときは読み上げない', voice.muted.length === 0, JSON.stringify(voice.muted));
+ok('自動対戦では読み上げない', voice.sim.length === 0, JSON.stringify(voice.sim));
+ok('止めるときだけ打ち切る', voice.stopped.length === 1 && voice.stopped[0] === '<cancel>',
+   JSON.stringify(voice.stopped));
+const vsafe = await pg.evaluate(() => {
+  const real = window.speechSynthesis;
+  const put = v => Object.defineProperty(window, 'speechSynthesis', { value: v, configurable: true, writable: true });
+  put(undefined);
+  let ok1 = false;
+  try { Voice.init(); Voice.speak('てすと'); Voice.stop(); ok1 = true; } catch (e) { ok1 = false; }
+  put(real);
+  return ok1;
+});
+ok('読み上げができない端末でも落ちない', vsafe, String(vsafe));
 
 /* 動きを抑える設定では演出を出さない */
 const rm = await pg.evaluate(() => typeof ReduceMotion === 'boolean');
