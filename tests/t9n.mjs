@@ -118,6 +118,47 @@ const sweep = await pg.evaluate(async () => {
 ok('全ての演出が最後まで流れる', sweep.bad.length === 0, sweep.bad.join());
 ok('流し終えたあと層が残らない', sweep.left === 0, String(sweep.left));
 
+/* ---------- 語り（画面下のひとこと） ---------- */
+const flav = await pg.evaluate(() => {
+  const ids = Object.keys(ENTRY_FX_OF);
+  const rows = ids.map(id => ({ id, f: ((CARD_BY_ID[id] || {}).flavor || '').trim() }));
+  return { missing: rows.filter(r => !r.f).map(r => r.id), maxLen: Math.max(...rows.map(r => r.f.length)) };
+});
+ok('演出を持つ48枚すべてにフレーバーがある', flav.missing.length === 0, flav.missing.join());
+ok('語りが長すぎない（40字以内）', flav.maxLen <= 40, String(flav.maxLen));
+
+const story = await pg.evaluate(async () => {
+  const read = async id => {
+    const p = FX.playEntry(ENTRY_FX_OF[id], id, null, '#sc-entryfx .scroll');
+    /* 札が出てから測る（重なりを見たいので） */
+    for (let i = 0; i < 60 && !document.querySelector('.e-card'); i++) await new Promise(r => setTimeout(r, 40));
+    await new Promise(r => setTimeout(r, 80));
+    const s = document.querySelector('.e-story');
+    const c = document.querySelector('.e-card');
+    const sr = s && s.getBoundingClientRect(), cr = c && c.getBoundingClientRect();
+    const got = { id, n: document.querySelectorAll('.e-story').length,
+                  text: s ? s.textContent.trim() : '',
+                  want: (CARD_BY_ID[id].flavor || '').trim(),
+                  inView: sr ? (sr.left >= -1 && sr.right <= innerWidth + 1 && sr.bottom <= innerHeight + 1) : false,
+                  clearOfCard: (sr && cr) ? sr.top >= cr.bottom : null };
+    await p;
+    return got;
+  };
+  const a = await read('satan_001');            // 終焉
+  const b = await read('servant_001');          // 虚無（共有演出・1枚目）
+  const c = await read('oni_001');              // 虚無（共有演出・2枚目）
+  return { a, b, c, left: document.querySelectorAll('.e-story').length };
+});
+ok('演出中に語りがひとつ出る', story.a.n === 1, JSON.stringify(story.a));
+ok('出る文はそのカードのフレーバーそのもの', story.a.text === story.a.want,
+   JSON.stringify([story.a.text, story.a.want]));
+ok('語りが画面からはみ出さない', story.a.inView, String(story.a.inView));
+ok('語りがカードに重ならない', story.a.clearOfCard === true, JSON.stringify(story.a));
+ok('演出を共有する札でも文はカードごとに変わる',
+   story.b.text !== story.c.text && story.b.text === story.b.want && story.c.text === story.c.want,
+   JSON.stringify([story.b.text, story.c.text]));
+ok('終わると語りが残らない', story.left === 0, String(story.left));
+
 /* ---------- 対戦中：演出のあとにカードが出る ---------- */
 const battle = await pg.evaluate(async () => {
   startGame({ p1: { deck: { goblin_001: 40 }, cls: 'formation', name: 'A' },

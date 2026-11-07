@@ -1105,6 +1105,24 @@ button{font-family:var(--f-type); color:inherit; cursor:pointer; border:0; backg
   88%{opacity:1; transform:translateX(-50%) translateY(0) scale(1)}
   100%{opacity:0; transform:translateX(-50%) translateY(-10px) scale(1.06); filter:blur(3px)}}
 
+/* 語り：画面下、黒帯のすぐ上に出るひとこと。カードのフレーバーをそのまま読ませる */
+.e-story{z-index:7; left:0; right:0; bottom:11.5%; margin:0 auto;
+  max-width:86%; padding:9px 18px 10px; border-radius:4px; text-align:center;
+  background:linear-gradient(90deg, transparent, rgba(0,0,0,.64) 9%, rgba(0,0,0,.8) 50%, rgba(0,0,0,.64) 91%, transparent);
+  animation:eStory var(--d,1200ms) ease-out both; animation-delay:var(--dl,0ms)}
+.e-story b{display:block; font-weight:400; font-family:var(--f-body); font-size:13.5px; line-height:1.8;
+  color:#F6EAD2; letter-spacing:.05em; text-shadow:0 1px 3px rgba(0,0,0,.95);
+  clip-path:inset(0 100% 0 0); animation:eStoryWipe 560ms steps(24,end) both; animation-delay:var(--dl,0ms)}
+.e-story::before{content:''; position:absolute; left:50%; top:0; width:38%; height:1px; margin-left:-19%;
+  background:linear-gradient(90deg, transparent, var(--ck2), transparent); opacity:.6}
+@keyframes eStory{0%{opacity:0; transform:translateY(16px)}
+  13%{opacity:1; transform:translateY(0)}
+  88%{opacity:1; transform:translateY(0)}
+  100%{opacity:0; transform:translateY(-7px)}}
+@keyframes eStoryWipe{0%{clip-path:inset(0 100% 0 0)}100%{clip-path:inset(0 0 0 0)}}
+@media (max-width:360px){ .e-story b{font-size:12.5px} .e-story{padding:8px 13px 9px; max-width:93%} }
+@media (max-height:460px){ .e-story{bottom:9.5%; padding:7px 16px 8px} .e-story b{font-size:12.5px; line-height:1.65} }
+
 /* 演出の最後に出るカード */
 .e-card{left:50%; top:50%; transform:translate(-50%,-50%); z-index:6;
   filter:drop-shadow(0 14px 34px rgba(0,0,0,.8)) drop-shadow(0 0 26px var(--ck))}
@@ -13255,6 +13273,10 @@ const UPDATES = [
             text: '47枚のカードに43種類の専用演出を付けた。演出はカードが場に出る前に流れ、終わってから場に出る。'
               + 'スペルの場合は効果が働く前に流れる。同じ札を続けて出したときは、2枚目以降の演出を省いてテンポを保つ。',
             why: '強い札が出てくる瞬間に重みを持たせるため。' },
+          { kind: 'new', name: '登場演出の語り',
+            text: '登場演出の最中、画面の下にそのカードのフレーバー文が出るようにした。文字は左から順に現れ、札が飛び去るまで残る。'
+              + '同じ演出を共有する札（虚無の5枚、双翼の2枚）でも、文はカードごとに変わる。',
+            why: 'そのカードがどういう存在なのかを、出てくる瞬間に読ませるため。' },
           { kind: 'new', name: '登場演出の見せ場',
             text: 'どの演出にも、札が出る瞬間に白閃・衝撃波・集中線・強い揺れがまとめて入るようにした。'
               + '合わせて画面が寄る動き、上下の黒帯、光りものの加算合成を足し、色を全体に濃くした。札そのものも大きく出る。',
@@ -14295,6 +14317,17 @@ const FX = {
     const nm = el('div', 'e-name', '<i>' + esc(S.name) + '</i><s>' + esc(S.kana) + '</s>');
     nm.style.setProperty('--d', frame + 'ms');
     st.appendChild(nm);
+    /* 語り（そのカードのフレーバーをそのまま出す）。名札より少し遅れて出す */
+    const story = ((CARD_BY_ID[cardId] || {}).flavor || '').trim();
+    if (story) {
+      const sd = el('div', 'e-story', '<b>' + esc(story) + '</b>');
+      sd.style.setProperty('--d', (frame - 200) + 'ms');
+      sd.style.setProperty('--dl', '200ms');
+      const sb = sd.firstChild;                            // 文字が左から現れる速さは長さに合わせる
+      sb.style.animationDuration = Math.min(760, 240 + story.length * 17) + 'ms';
+      sb.style.animationTimingFunction = 'steps(' + Math.max(8, story.length) + ', end)';
+      st.appendChild(sd);
+    }
     /* 部品を順に置く */
     for (const [pk, o] of (S.parts || [])) {
       const f = EFX_PARTS[pk]; if (!f) continue;
