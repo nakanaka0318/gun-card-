@@ -2625,7 +2625,7 @@ const KEYWORDS = {
   blunt:      { name: '緩衝',   glyph: '緩', desc: 'このフォロワーが受ける4以上のダメージは3になる。3以下のダメージはそのまま受ける。' },
   bane:       { name: '必殺',   glyph: '必', desc: 'ステータスに関係なく、このフォロワーと戦闘したフォロワーを破壊する（自分が攻撃した時・相手に攻撃された時のどちらでも発動する）。' },
   growth:     { name: '成長',   glyph: '成', desc: '自分のPPがX以上のとき、このカードのコストはXになり「成長効果」を得る。PPがX未満なら元のコストのまま。成長が複数段あるカードは、払えるうちで一番高い段が適用され、それ以下の段の効果も全て働く。' },
-  okugi:      { name: '奥義',   glyph: '奥', desc: '奥義X ＝「自分のターン数」＋「このカードが手札にある間にフォロワーが進化した回数」。その値が X 以上のときにプレイすると、奥義の効果が働く。奥義が複数段あるカードは、条件を満たした段の効果が全て働く。効果の書き方がない奥義はファンファーレとして働く。手札のカードの左上に現在の奥義値が出る。' },
+  okugi:      { name: '奥義',   glyph: '奥', desc: '奥義X ＝ 自分の「奥義ゲージ」の値。ゲージは自分のターン開始時に+1、自分のフォロワーが進化した時に+1される（相手の進化では増えない）。ゲージが X 以上のときにプレイすると、奥義の効果が働く。奥義が複数段あるカードは、条件を満たした段の効果が全て働く。効果の書き方がない奥義はファンファーレとして働く。手札のカードの左上に現在の奥義値が出る。' },
   resonance:  { name: '共鳴',   glyph: '共', desc: '共鳴 ＝ 自分の山札の枚数が偶数のとき、共鳴の効果が働く。0枚も偶数として扱う。山札の枚数は画面上部の DECK に出ているので、引く・捨てるで偶数奇数を操れる。' },
   fusion:     { name: '融合',   glyph: '融', desc: '融合は手札で行う。このカードが手札にある間、画面下の「融合」ボタンから、条件に合う自分の手札を選んで融合できる（融合先が複数あるときは先にどのカードに融合させるか選ぶ）。選んだ手札は1枚でも複数枚でもよく、融合すると全て消滅して、このカードの融合した枚数・種類が増える。増えた枚数・種類を条件にした効果はカードごとに異なる（そのまま手札で姿を変えるものもある）。融合しただけでは場には出ないので、融合を済ませたカードは改めて手札からプレイする。カードの左上に、今まで融合した種類の数が出る。' }
 };
@@ -11697,7 +11697,6 @@ function makeInstance(cardId, owner) {
     keywords: (c.keywords || []).slice(), countdown: c.countdown || 0,
     x: c.counter ? c.counter.start : 0, extraEffects: [],
     evolved: false, superEvolved: false, summonedThisTurn: false, attacksLeft: 0, destroyed: false,
-    okugiEvolves: 0,                                       // 奥義：手札にある間にフォロワーが進化した回数
     fusedIds: [], fusedCount: 0                            // 融合：今まで融合した種類（重複なし）と延べ枚数
   };
 }
@@ -11718,10 +11717,11 @@ function okugiTiers(def) {
   if (!def || !def.okugi) return [];
   return def.okugi.slice().sort((a, b) => a - b);
 }
-/* 奥義の現在値 ＝ 自分のターン数 ＋ そのカードが手札にある間にフォロワーが進化した回数 */
+/* 奥義の現在値 ＝ 持ち主の奥義ゲージ。
+   ゲージは「自分のターン開始時」と「自分のフォロワーが進化した時」にだけ+1される。 */
 function okugiValue(f) {
   const P = G && G.players ? G.players[f.owner] : null;
-  return (P ? P.turnCount : 0) + ((f && f.okugiEvolves) || 0);
+  return P ? (P.okugi || 0) : 0;
 }
 /* 現在の奥義値で働くしきい値（それ以下の段は全て働く） */
 function okugiReached(f) {
@@ -11972,6 +11972,7 @@ function newPlayer(idx, deck, cls, isFirst, deckName) {
     srcIds: deck.slice(),                                  // 組んだ40枚の構成（引いた後も消えない。財布が参照する）
     attackedThisTurn: false,                               // そのターンに自分のフォロワーが攻撃したか
     hand: [], board: [], grave: [], badges: [], machineKinds: [], turnCount: 0, burned: 0,
+    okugi: 0,                                              // 奥義ゲージ（自分のターン開始時と、自分のフォロワーが進化した時に+1）
     destroyedFollowers: [], destroyedAmulets: [], cardEnterCounts: {}, followersEntered: 0, followersThisTurn: 0,
     evolveCount: 0,                                        // このバトル中に自分のフォロワーが進化した回数（方法を問わない）
     evolveNoticed: false, superNoticed: false, directSummonedThisTurn: [], handicaps: [],
@@ -12043,6 +12044,7 @@ async function drawCards(pIdx, n, silent) {
 async function beginTurn() {
   const p = G.players[G.active];
   G.globalTurn++; p.turnCount++;
+  p.okugi = (p.okugi || 0) + 1;                            // 奥義ゲージ：自分のターン開始時に+1
   p.maxPP = clamp(maxPPFor(p.turnCount) + p.maxPPBonus, 0, RULES.ppCap);
   p.pp = p.maxPP; p.extraActive = 0;
   p.evolveUsed = false; p.superUsed = false; p.handCostMod = 0;
@@ -12312,8 +12314,8 @@ async function applyEvolve(f, isSuper, free) {
     p.evolveCount = (p.evolveCount || 0) + 1;
     pushLog(`${f.name} が進化（+2/+2・突進）　${p.name}の進化 ${p.evolveCount}回目`);
   }
-  /* 奥義：手札にあるカードは、進化が起きるたびに奥義値が1増える */
-  G.players.forEach(pl => pl.hand.forEach(c => { c.okugiEvolves = (c.okugiEvolves || 0) + 1; }));
+  /* 奥義ゲージ：自分のフォロワーが進化した時だけ+1（相手の進化では増えない） */
+  p.okugi = (p.okugi || 0) + 1;
   UI.clearSel(); UI.renderBattle();
   const node = document.querySelector(`[data-uid="${f.uid}"]`);
   if (node) await FX.evolveBurst(node, isSuper);
@@ -13349,6 +13351,13 @@ const UPDATES = [
               + '演出が先に終わっても読み終わるまで止めない。効果音を切っているときは読まない。'
               + '読み上げを持たない端末では、これまで通り文字だけが出る。',
             why: '「言う」＝声に出すという意味だったため。' },
+          { kind: 'rule', name: '奥義ゲージ',
+            text: '奥義の値を、札ごとの数え上げからプレイヤーごとの「奥義ゲージ」に変えた。'
+              + 'ゲージが増えるのは「自分のターン開始時」と「自分のフォロワーが進化した時」の二つだけ。'
+              + '相手の進化では増えない。手札のどの札も同じ値になり、後から引いた札が不利になることはない。',
+            from: '自分のターン数＋その札が手札にある間にどちらかのフォロワーが進化した回数',
+            to: '自分のターン開始時に+1、自分のフォロワーが進化した時に+1',
+            why: '札ごとに値が違って分かりにくく、相手の進化でも増えてしまっていたため。' },
           { kind: 'new', name: '読み上げの入切',
             text: '登場演出の読み上げを入切できるようにした。最初はオフ。'
               + 'ホームの右下と、対戦中の設定から切り替えられる。選んだ状態は次からも残る。'
