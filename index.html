@@ -1777,6 +1777,7 @@ select,input[type=text]{
       <span id="ppCurve">縦・横どちらでも</span>
       <button class="chip" id="muteHome" type="button"></button>
       <button class="chip" id="musicHome" type="button"></button>
+      <button class="chip" id="voiceHome" type="button" hidden></button>
     </footer>
   </section>
 
@@ -2238,6 +2239,7 @@ select,input[type=text]{
   <div class="sub">BATTLE MENU</div>
   <div class="kv"><span>効果音</span><button class="btn sm" id="mMute">ON</button></div>
   <div class="kv"><span>音楽</span><button class="btn sm" id="mMusic">ON</button></div>
+  <div class="kv" id="mVoiceRow"><span>登場演出の読み上げ</span><button class="btn sm" id="mVoice">OFF</button></div>
   <div class="kv"><span>ターンタイマー</span><b id="mTimer">--</b></div>
   <div class="ov-row">
     <button class="btn" id="mResign">投了してホームへ</button>
@@ -13347,6 +13349,11 @@ const UPDATES = [
               + '演出が先に終わっても読み終わるまで止めない。効果音を切っているときは読まない。'
               + '読み上げを持たない端末では、これまで通り文字だけが出る。',
             why: '「言う」＝声に出すという意味だったため。' },
+          { kind: 'new', name: '読み上げの入切',
+            text: '登場演出の読み上げを入切できるようにした。最初はオフ。'
+              + 'ホームの右下と、対戦中の設定から切り替えられる。選んだ状態は次からも残る。'
+              + '読み上げを持たない端末では切り替え口そのものを出さない。',
+            why: '声が要らない場面でも遊べるようにするため。' },
           { kind: 'new', name: '登場演出が全レジェンドに揃う',
             text: '残っていたレジェンド27枚にも専用の演出を付けた。名品・追走・賞金首・愚者・銀翼・錬成・万食・三道・'
               + '真線・純白・蛇殿・慕情・破壊・天眼・祭壇・破式・伸長・冥河・神紋・天斧・水理・戦車・安息・小花・'
@@ -13654,6 +13661,7 @@ async function runMatchupAnalysis(games, onProgress, ver) {
 const Voice = {
   RATE: 1.45,          /* 読む速さ（1が端末の標準）。演出に対して間延びしないところ */
   VOL: .5,             /* 声の大きさ。効果音や音楽に被らないよう控えめにする */
+  on: store.get('voice', false),   /* 読み上げの入切。最初はオフ */
   ja: null, picked: false,
   init() {
     if (!window.speechSynthesis) return;
@@ -13667,7 +13675,14 @@ const Voice = {
     pick();
     try { speechSynthesis.addEventListener('voiceschanged', pick); } catch (e) { /* 古い端末では無視 */ }
   },
-  can() { return !!(window.speechSynthesis && Sfx.on && !(G && G.sim)); },
+  can() { return !!(this.on && window.speechSynthesis && Sfx.on && !(G && G.sim)); },
+  /* 端末が読み上げを持っているか（持っていなければ切り替え口を出さない） */
+  supported() { return !!window.speechSynthesis; },
+  toggle() {
+    this.on = !this.on; store.set('voice', this.on);
+    if (!this.on) this.stop();
+    return this.on;
+  },
   speak(text) {
     if (!text || !this.can()) return false;
     try {
@@ -19065,12 +19080,14 @@ function initEvents() {
   $('#btMenu').addEventListener('click', () => {
     $('#mMute').textContent = Sfx.on ? 'ON' : 'OFF';
     $('#mMusic').textContent = Bgm.on ? 'ON' : 'OFF';
+    $('#mVoice').textContent = Voice.on ? 'ON' : 'OFF';
     $('#mTimer').textContent = G && G.timerLimit ? G.timerLimit + '秒' : 'なし';
     $('#ovMenu').hidden = false;
   });
   $('#mClose').addEventListener('click', () => { $('#ovMenu').hidden = true; });
   $('#mMute').addEventListener('click', () => { Sfx.on = !Sfx.on; store.set('sound', Sfx.on); $('#mMute').textContent = Sfx.on ? 'ON' : 'OFF'; updateMuteLabel(); if (!Sfx.on) Voice.stop(); Sfx.play('click'); });
   $('#mMusic').addEventListener('click', () => { $('#mMusic').textContent = Bgm.toggle() ? 'ON' : 'OFF'; updateMuteLabel(); Sfx.play('click'); });
+  $('#mVoice').addEventListener('click', () => { Voice.toggle(); updateMuteLabel(); Sfx.play('click'); });
   $('#mResign').addEventListener('click', () => {
     if (G) { G.phase = 'over'; stopTimer(); }
     $('#ovMenu').hidden = true; $('#ovResult').hidden = true; UI.go('home');
@@ -19098,6 +19115,11 @@ function initEvents() {
   });
   $('#muteHome').addEventListener('click', () => { Sfx.on = !Sfx.on; store.set('sound', Sfx.on); updateMuteLabel(); if (!Sfx.on) Voice.stop(); Sfx.play('click'); });
   $('#musicHome').addEventListener('click', () => { Bgm.toggle(); updateMuteLabel(); Sfx.play('click'); });
+  $('#voiceHome').addEventListener('click', () => {
+    /* 入れた直後は、どんな声で読むのかを一度だけ聞かせる */
+    if (Voice.toggle()) Voice.speak('読み上げを始める。');
+    updateMuteLabel(); Sfx.play('click');
+  });
   window.addEventListener('resize', () => { if (UIState.screen === 'battle') UI.renderBattle(); });
   document.addEventListener('keydown', e => {
     if (UIState.screen !== 'battle') return;
@@ -19107,6 +19129,14 @@ function initEvents() {
 }
 function updateMuteLabel() {
   const n = $('#muteHome'); if (n) n.textContent = (Sfx.on ? '♪ 効果音 ON' : '♪ 効果音 OFF') + ' / タップで切替';
+  const v = $('#voiceHome');
+  if (v) {
+    /* 読み上げを持たない端末では切り替え口そのものを出さない */
+    v.hidden = !Voice.supported();
+    v.textContent = Voice.on ? '🗣 読み上げ ON' : '🗣 読み上げ OFF';
+  }
+  const mv = $('#mVoice'); if (mv) mv.textContent = Voice.on ? 'ON' : 'OFF';
+  const mvr = $('#mVoiceRow'); if (mvr) mvr.hidden = !Voice.supported();
   const m = $('#musicHome');
   if (m) m.textContent = Bgm.on
     ? '♫ 音楽 ON' + (Bgm.key ? '：' + (BGM_TRACKS[Bgm.key] || {}).name : '')

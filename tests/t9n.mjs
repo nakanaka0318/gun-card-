@@ -135,7 +135,11 @@ const flav = await pg.evaluate(() => {
   const rows = ids.map(id => ({ id, f: ((CARD_BY_ID[id] || {}).flavor || '').trim() }));
   return { missing: rows.filter(r => !r.f).map(r => r.id), maxLen: Math.max(...rows.map(r => r.f.length)) };
 });
-ok('演出を持つ48枚すべてにフレーバーがある', flav.missing.length === 0, flav.missing.join());
+/* フレーバーが無いのはアクシア1枚だけ（そこだけ語りと読み上げが出ない）。
+   ほかに増えたら気づけるよう、この1枚に限って通す。 */
+ok('語りが出ない札はアクシアだけ',
+   flav.missing.length === 0 || (flav.missing.length === 1 && flav.missing[0] === 'axia_001'),
+   flav.missing.join());
 ok('語りが長すぎない（40字以内）', flav.maxLen <= 40, String(flav.maxLen));
 
 const story = await pg.evaluate(async () => {
@@ -232,8 +236,15 @@ const voice = await pg.evaluate(async () => {
         getVoices: () => [], addEventListener: () => {} });
   const out = {};
   Sfx.on = true; G.sim = false; Voice.picked = true; Voice.ja = null;
+  out.defaultOff = Voice.on === false;   /* 最初はオフ */
+  Voice.on = true;
   await FX.playEntry('doom', 'satan_001', null, '#bt');
   out.afterPlay = spoken.slice();
+  /* 読み上げを切っているときは読まない */
+  spoken.length = 0; Voice.on = false;
+  await FX.playEntry('doom', 'satan_001', null, '#bt');
+  out.voiceOff = spoken.slice();
+  Voice.on = true;
   /* 音を切っているときは読まない */
   spoken.length = 0; Sfx.on = false;
   await FX.playEntry('doom', 'satan_001', null, '#bt');
@@ -255,6 +266,8 @@ ok('演出中にそのカードの文を読み上げる',
 ok('読み上げは日本語の声で頼む', /\|ja/.test(voice.afterPlay[0] || ''), String(voice.afterPlay[0]));
 ok('演出が終わっても読み上げを打ち切らない',
    voice.afterPlay.indexOf('<cancel>') < 0, JSON.stringify(voice.afterPlay));
+ok('読み上げは最初オフになっている', voice.defaultOff, String(voice.defaultOff));
+ok('読み上げを切っていると読まない', voice.voiceOff.length === 0, JSON.stringify(voice.voiceOff));
 ok('音を切っているときは読み上げない', voice.muted.length === 0, JSON.stringify(voice.muted));
 ok('自動対戦では読み上げない', voice.sim.length === 0, JSON.stringify(voice.sim));
 ok('止めるときだけ打ち切る', voice.stopped.length === 1 && voice.stopped[0] === '<cancel>',
@@ -269,6 +282,22 @@ const vsafe = await pg.evaluate(() => {
   return ok1;
 });
 ok('読み上げができない端末でも落ちない', vsafe, String(vsafe));
+
+/* 入切の口がある */
+const vtog = await pg.evaluate(() => {
+  const keep = Voice.on;
+  const r = { home: !!document.querySelector('#voiceHome'), menu: !!document.querySelector('#mVoice'),
+              before: Voice.on };
+  Voice.toggle(); r.after = Voice.on; r.saved = store.get('voice', null);
+  Voice.toggle(); r.back = Voice.on;
+  Voice.on = keep;
+  return r;
+});
+ok('ホームに読み上げの入切がある', vtog.home, String(vtog.home));
+ok('対戦中の設定にも読み上げの入切がある', vtog.menu, String(vtog.menu));
+ok('押すと切り替わり、設定が残る',
+   vtog.after === !vtog.before && vtog.saved === vtog.after && vtog.back === vtog.before,
+   JSON.stringify(vtog));
 
 /* 動きを抑える設定では演出を出さない */
 const rm = await pg.evaluate(() => typeof ReduceMotion === 'boolean');
